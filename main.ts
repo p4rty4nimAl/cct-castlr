@@ -60,7 +60,6 @@ class Inventory {
             total += count;
         return total;
     }
-
     *getNextAvailableSlot(name: string): Generator<number, void, undefined> {
         // check all slots of item - if none work, return empty slot
         const slotCounts = this.slots.get(name);
@@ -226,21 +225,17 @@ class Data {
     }
     _loadRecipesFromDirectory(directory: string) {
         const files = fs.list(directory);
-        for (const i of $range(0, files.length - 1)) {
-            const filePath = fs.combine(directory, files[i]);
-            if (endsWith(filePath, ".json"))
-                this._addRecipe(textutils.unserialiseJSON(readFile(filePath)) as Recipe);
-        }
+        for (const i of $range(0, files.length - 1))
+            if (endsWith(files[i], ".json"))
+                this._addRecipe(textutils.unserialiseJSON(readFile(fs.combine(directory, files[i]))) as Recipe);
     }
     loadRecipeTypesFromDirectory(directory: string) {
         this._recipeTypes = [];
         this._recipes = [];
         const files = fs.list(directory);
-        for (const i of $range(0,  files.length - 1)) {
-            const filePath = fs.combine(directory as string, files[i])
-            if (endsWith(filePath, ".json"))
-                this._addRecipeType(textutils.unserialiseJSON(readFile(filePath)) as RecipeType);
-        }
+        for (const i of $range(0,  files.length - 1))
+            if (endsWith(files[i], ".json"))
+                this._addRecipeType(textutils.unserialiseJSON(readFile(fs.combine(directory as string, files[i]))) as RecipeType);
     }
     getTotalItemCount(name: string) {
         let total = 0;
@@ -276,9 +271,9 @@ class Data {
             uniqueNames.add(recipe.typeID);
         return orderStrings(uniqueNames);
     }
-    getStoragesByType(type: StorageType) {
-        if (type !== StorageType.NotInput)
-            return this._storagesByType[type];
+    getStoragesByType(sType: StorageType) {
+        if (sType !== StorageType.NotInput)
+            return this._storagesByType[sType];
         const storages = this._storagesByType[StorageType.Storage];
         for (const storage in this._storagesByType[StorageType.Output]) storages.add(storage);
         return storages;
@@ -387,25 +382,23 @@ const submenus = {
     C(instance: Data) {
         const outputChest = instance._inventories.get(instance.settings.outputChest)
         const max = outputChest.maxSlotCapacity * outputChest.size;
-        const orderedAllowedItems = instance.getOrderedItemNames();
+        const items = instance.getOrderedItemNames();
         const [ name, count ] = correctableInput(
             ["item to craft", "amount to craft"], 
             [namespaceValidator, intValidator(1, max)],
-            [stringCompletor(orderedAllowedItems)]
+            [stringCompletor(items)]
         );
-        // hold from storage count to force gatherIngredients to craft it, rather than take from storage.
         const [ itemsUsed, overallRecipe ] = instance.gatherIngredients(name, tonumber(count));
         const itemUseStrings = [];
         const missingStrings = [];
         for (const [name, count] of itemsUsed) {
             if (count !== 0) {
                 const strVal = `${name} x ${count}`;
-                const isMissing = instance.getTotalItemCount(name) - count < 0;
-                if (isMissing) missingStrings.push(strVal);
+                if (instance.getTotalItemCount(name) < count) missingStrings.push(strVal);
                 itemUseStrings.push(strVal);
             } 
         }
-        if (missingStrings.length !== 0) {
+        if (missingStrings.length > 0) {
             print("Error: the following items must be inserted:")
             paginator(missingStrings);
             return;
@@ -429,7 +422,7 @@ const submenus = {
                 repeatCount = currentRecipe.count;
                 countMultiplier = 1;
             }
-            for (const i of $range(1, repeatCount))
+            for (const _ of $range(1, repeatCount))
                 for (const inputItem of currentRecipe.input)
                     if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier))
                         print(`Error crafting ${currentRecipe.output.name}`);
@@ -442,10 +435,10 @@ const submenus = {
                 print(`Currently crafting: ${targetItem.count} x ${targetItem.name} (${timer}s)\n`);
                 currentOutputChest.regenerateData();
             }
-            // take more time here, avoid missing items in next transfer?
             print(`${targetItem.count} x ${targetItem.name} complete.`);
         }
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, tonumber(count));
+        sleep(instance.settings.period);
     },
     A(instance: Data) {
         const submenuText = [
@@ -453,10 +446,10 @@ const submenus = {
             "   R - add new recipe.",
             "Entry to add: "
         ];
-        const orderedAllowedItems = instance.getOrderedItemNames();
+        const items = instance.getOrderedItemNames();
         const branches = {
             T() {
-                const orderedAllowedInventories = instance.getOrderedInventoryNames();
+                const invs = instance.getOrderedInventoryNames();
                 const [ typeID, inputChest, outputChest ] = correctableInput(  
                     [
                         "namespaced recipe ID", 
@@ -464,14 +457,14 @@ const submenus = {
                         "output chest ID"
                     ],
                     [ namespaceValidator ],
-                    [ , stringCompletor(orderedAllowedInventories), stringCompletor(orderedAllowedInventories) ]
+                    [ , stringCompletor(invs), stringCompletor(invs) ]
                 );
                 const saveLocation = fs.combine("./types/", `${splitString(typeID, ":")[1]}.json`);
                 writeFile(saveLocation, textutils.serializeJSON({ typeID, input: inputChest, output: outputChest }));
                 fs.makeDir(`./recipes/${splitString(typeID, ":")[1]}`);
             },
             R() {
-                const orderedAllowedRecipes = instance.getOrderedRecipeNames();
+                const recipes = instance.getOrderedRecipeNames();
                 const [ typeID, outputItemID, outputItemCount ] = correctableInput(
                     [
                         "namespaced recipe ID", 
@@ -479,7 +472,7 @@ const submenus = {
                         "output item count"
                     ],
                     [ namespaceValidator, namespaceValidator, intValidator(1, 64) ],
-                    [ stringCompletor(orderedAllowedRecipes), stringCompletor(orderedAllowedItems)]
+                    [ stringCompletor(recipes), stringCompletor(items)]
                 );
                 let inputCount = -1;
                 while (!(0 < inputCount && inputCount < 10))
@@ -494,7 +487,7 @@ const submenus = {
                     validationFuncs.push(namespaceValidator);
                     validationFuncs.push(intValidator(1, 64));
                     
-                    completionFuncs[i * 2] = stringCompletor(orderedAllowedItems);
+                    completionFuncs[i * 2] = stringCompletor(items);
                 }
                 const inputItemsRaw = correctableInput(inputStrings, validationFuncs, completionFuncs);
                 const inputItems = [];
@@ -510,8 +503,7 @@ const submenus = {
         instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
-        const shouldClearOutputs = input("Also store items from outputs? (Y/N): ") === "Y";
-        if (shouldClearOutputs) {
+        if (input("Also store items from outputs? (Y/N): ") === "Y") {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(instance.settings.inputChest);
             for (const recipeType of instance._recipeTypes)
@@ -524,7 +516,7 @@ const submenus = {
         instance.moveItemToMany(instance.settings.inputChest, instance.getStoragesByType(StorageType.Storage));
     },
     T(instance: Data) {
-        const allowedOrderedItems = instance.getOrderedItemNames();
+        const items = instance.getOrderedItemNames();
         const [ name ] = correctableInput(
             [ "item name" ], 
             [ (name: string) => {
@@ -532,7 +524,7 @@ const submenus = {
                 print(`${max} x ${name} stored.`);
                 return namespaceValidator(name);
             } ],
-            [ stringCompletor(allowedOrderedItems) ]
+            [ stringCompletor(items) ]
         );
         const max = instance.getTotalItemCount(name);
         const [ amountToTake ] = correctableInput([ "amount to take" ], [ intValidator(0, max) ], [ undefined ]);
@@ -576,8 +568,10 @@ function main() {
         const process = submenus[action];
         if (process !== undefined) {
             process(instance);
-        } else print("Invalid mode!")
-        sleep(instance.settings.period);
+        } else {
+            print("Invalid mode!");
+            sleep(instance.settings.period);
+        }
         instance.showLog();
     }
 }
