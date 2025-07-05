@@ -47,7 +47,9 @@ class Inventory {
         this._peripheral = peripheral.wrap(peripheralName) as InventoryPeripheral;
         this.type = type;
         this.name = peripheralName;
-        this.size = (size === undefined) ? this._peripheral.size() : size;
+        if (size === undefined) {
+            this.size = this._peripheral.size()
+        } else this.size = size;
         this.maxSlotCapacity = this._peripheral.getItemLimit(1);
         this.regenerateData();
     }
@@ -60,7 +62,8 @@ class Inventory {
             total += count;
         return total;
     }
-    *getNextAvailableSlot(name: string) {
+
+    *getNextAvailableSlot(name: string): Generator<number, void, undefined> {
         // check all slots of item - if none work, return empty slot
         const slotCounts = this.slots.get(name);
         if (slotCounts !== undefined)
@@ -71,71 +74,58 @@ class Inventory {
         for (const i of $range(1, this.size))
             if (this._list[i] === undefined) {
                 yield i;
-                yield* this.getNextAvailableSlot(name);
+                for (const value of this.getNextAvailableSlot(name)) yield value;
             }
-        print(`${peripheral.getName(this._peripheral)} is too full for ${name}`);
-        return -1;
+        // DEBUG && print(`${peripheral.getName(this._peripheral)} is too full for ${name}`);
+        return;
     }
     recieveItems(name: string, slot: number, count: number) {
         // update this.slots
-        const slotCounts = this.slots.get(name)
-        const currentAmount = slotCounts.get(slot)
-        if (currentAmount !== undefined) {
-            if (currentAmount + count > this.maxSlotCapacity) {
-                print("issue - recieveItems called with excessive value")
-            }
-            slotCounts.set(slot, currentAmount + count);
+        let currentSlots = this.slots.get(name);
+        if (currentSlots === undefined) {
+            currentSlots = new LuaMap();
+            this.slots.set(name, currentSlots);
         }
+        const newAmount = currentSlots.get(slot) + count;
+        // if (currentAmount + count > this.maxSlotCapacity) DEBUG && print("issue - recieveItems called with excessive value");
+        currentSlots.set(slot, newAmount);
         // update this._list
-        if (this._list[slot].name !== name) print("issue - recieveItems called with wrong name");
-        this._list[slot].count += count;
+        if (this._list[slot] === undefined) {
+            const slotDetail: SlotDetail = { name, count };
+            this._list[slot] = slotDetail;
+        } else {
+            // if (this._list[slot].name !== name) DEBUG && print("issue - recieveItems called with wrong name");
+            this._list[slot].count = newAmount;
+        }
     }
-    pushItems(to: Inventory, fromSlot: number, limit?: number, toSlot?: number) {
+    pushItems(to: Inventory, fromSlot: number, limit?: number) {
         if (this.type === StorageType.Input) {
             print("Attempting to push items from an input storage");
             input("chance to terminate here")
         }
         const itemToMove = this._list[fromSlot];
         if (limit === undefined) limit = itemToMove.count;
-        if (toSlot === undefined) {
-            let totalMoved = 0;
-            const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
-            while (totalMoved > limit) {
-                const nextSlot = slotGenerator.next();
-                if (nextSlot.done) return totalMoved;
-                toSlot = nextSlot.value;
-                const amountMoved = this._peripheral.pushItems(to.name, fromSlot, limit - totalMoved, toSlot);
-                totalMoved += amountMoved;
-                // sync stored data in src
-                if (itemToMove.count === amountMoved) {
-                    // delete
-                    this.slots.get(itemToMove.name).delete(fromSlot);
-                    this._list[fromSlot] = undefined;
-                } else if (amountMoved !== 0) {
-                    // update
-                    const amountInSlot = itemToMove.count;
-                    this.slots.get(itemToMove.name).set(fromSlot, amountInSlot - amountMoved);
-                    this._list[fromSlot].count -= amountMoved;
-                }
-                // sync stored data in dest
-                to.recieveItems(itemToMove.name, toSlot, amountMoved);
-            }
-            return totalMoved;
-        } else {
-            const amountMoved = this._peripheral.pushItems(to.name, fromSlot, limit, toSlot);
-            if (itemToMove.count === amountMoved) {
-                // delete
-                this.slots.get(itemToMove.name).delete(fromSlot);
-                this._list[fromSlot] = undefined;
-            } else if (amountMoved !== 0) {
-                // update
-                const amountInSlot = itemToMove.count;
-                this.slots.get(itemToMove.name).set(fromSlot, amountInSlot - amountMoved);
-                this._list[fromSlot].count -= amountMoved;
-            }
+        let totalMoved = 0;
+        const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
+        while (totalMoved < limit) {
+            const nextSlot = slotGenerator.next();
+            if (nextSlot.done) return totalMoved;
+            // will never be void due to above check
+            const toSlot = nextSlot.value as number;
+            const amountMoved = this._peripheral.pushItems(to.name, fromSlot, limit - totalMoved, toSlot);
+            totalMoved += amountMoved;
+
+            // sync stored data in src
+            let newSlotCount: number;
+            if (itemToMove.count !== amountMoved) newSlotCount = itemToMove.count - amountMoved;
+            // update / delete
+            // setting value to 'undefined' is the same as removing it
+            this.slots.get(itemToMove.name).set(fromSlot, newSlotCount);
+            this._list[fromSlot].count = newSlotCount;
+            // sync stored data in dest
             to.recieveItems(itemToMove.name, toSlot, amountMoved);
-            return amountMoved;
         }
+        return totalMoved;
     }
     regenerateData() {
         this.slots = new LuaMap();
@@ -210,21 +200,24 @@ class Data {
         }
     }
     _addRecipe = (recipe: Recipe) => {
-        if (recipe.typeID in this._recipeTypes.map(type => type.typeID)) {
-            print("Recipe type must be declared before adding a recipe using it.");
-            return;
-        }
-        if (recipe.output.name in this._recipes.map(recipe => recipe.output.name)) {
-            print("Recipes with outputs matching another are not allowed.");
-            return;
-        }
+        for (const existingType of this._recipeTypes)
+            if (recipe.typeID === existingType.typeID) {
+                print("Recipe type must be declared before adding a recipe using it.");
+                return;
+            }
+        for (const existingRecipe of this._recipes)
+            if (recipe.output.name === existingRecipe.output.name) {
+                print("Recipes with outputs matching another are not allowed.");
+                return;
+            }
         this._recipes.push(recipe);
     }
     _addRecipeType = (recipeType: RecipeType) => {
-        if (recipeType.typeID in this._recipeTypes.map(type => type.typeID)) {
-            print("Recipe types with types matching another are not allowed.");
-            return; 
-        }
+        for (const existingType of this._recipeTypes)
+            if (existingType.typeID === recipeType.typeID) {
+                print("Recipe types with types matching another are not allowed.");
+                return;
+            }
         this._recipeTypes.push(recipeType);
         this._loadRecipesFromDirectory(fs.combine('./recipes/', splitString(recipeType.typeID, ":")[1]));
     }
@@ -289,7 +282,13 @@ class Data {
     }
     getRecipeType = (typeID: RecipeTypeIdentifier) => {
         // typeID unique, return either matching recipe or undefined.
-        return this._recipeTypes.filter(recipe => recipe.typeID === typeID)[0];
+        for (const recipeType of this._recipeTypes)
+            if (recipeType.typeID === typeID) return recipeType;
+    }
+    getRecipe = (output: string) => {
+        // output name unique, return either matching recipe or undefined.
+        for (const recipe of this._recipes)
+            if (recipe.output.name === output) return recipe;
     }
     // output -> storage, specific item
     moveItemFromOne = (from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean => {
@@ -308,16 +307,20 @@ class Data {
     }
     // storage -> input
     moveItemFromMany = (from: LuaSet<string>, to: string, name: string, limit: number): boolean => {
+        // const log = this.log("MIFM")
         const destInv = this._inventories.get(to);
         // for each source inventory
         for (const srcInvStr of from) {
+            // log(`Using srcInvStr: ${srcInvStr}`)
             const srcInv = this._inventories.get(srcInvStr);
             const slotCounts = srcInv.slots.get(name);
             if (slotCounts !== undefined)
+                // log(`slotCounts defined`)
                 // for every slot in inventory, given it is defined
                 for (const [fromSlot, ] of slotCounts) {
                     // move items to destination, up to limit - new limit = old limit - amount moved
                     limit -= srcInv.pushItems(destInv, fromSlot, limit);
+                    // log(`moved items, new limit = ${limit}`)
                     if (limit <= 0) return true;
                 }
         }
@@ -348,7 +351,7 @@ class Data {
             const craftAmount = currentOutput.count - totalCount - currentUsage;
             if (craftAmount > 0) {
                 // find recipe, use first result (there should only ever be 0 or 1 recipes matching the filter)
-                const recipeToUse = this._recipes.filter(recipe => recipe.output.name === currentOutput.name)[0];
+                const recipeToUse = this.getRecipe(currentOutput.name) as Recipe & {count: number}; 
                 if (recipeToUse !== undefined) {
                     // have recipe, but need to craft
                     // take all available, craft deficit
@@ -357,7 +360,8 @@ class Data {
                     const recipeMultiplier = math.ceil(craftAmount / recipeToUse.output.count);
                     for (const item of recipeToUse.input)
                         itemsToGather.push({ name: item.name, count: item.count * recipeMultiplier});
-                    recipes.push({ ...recipeToUse, count: recipeMultiplier });
+                    recipeToUse.count = recipeMultiplier;
+                    recipes.push(recipeToUse);
                 // no recipe - take item
                 } else itemsGathered.set(currentOutput.name, currentUsage + craftAmount);
             // have enough already - take item
@@ -366,7 +370,9 @@ class Data {
         }
         return $multi(itemsGathered, recipes);
     }
-    log = (prefix: string) => (val: string) => this._log.push(`${prefix}: ${val}`);
+    log = (prefix: string) => (val: string) => {
+        this._log.push(`${prefix}: ${val}`);
+    }
     showLog = () => {
         if (!DEBUG) return;
         paginator(this._log);
@@ -413,16 +419,17 @@ const submenus = {
             // submit items to crafter
             // repeat (recipe mult) times, round robin to allow for recipes with specific order
             // prevents overload of too many of the same item preventing the recipe being completed
+            let repeatCount = 1;
+            let countMultiplier = currentRecipe.count;
             if (currentRecipe.input.length > 1) {
-                for (const i of $range(1, currentRecipe.count))
-                    for (const inputItem of currentRecipe.input)
-                        if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count))
-                            print(`Error crafting ${currentRecipe.output.name}`);
-            } else {
-                for (const inputItem of currentRecipe.input)
-                        if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * currentRecipe.count))
-                            print(`Error crafting ${currentRecipe.output.name}`);
+                repeatCount = currentRecipe.count;
+                countMultiplier = 1;
             }
+            for (const i of $range(1, repeatCount))
+                for (const inputItem of currentRecipe.input)
+                    if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier))
+                        print(`Error crafting ${currentRecipe.output.name}`);
+            
             let timer = 0;
             const targetItem = { name: currentRecipe.output.name, count: currentRecipe.output.count * currentRecipe.count}
             while (currentOutputChest.getItemCount(targetItem.name) < targetItem.count) {
@@ -505,18 +512,12 @@ const submenus = {
         if (shouldClearOutputs) {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(instance.settings.inputChest);
-            for (const outputInv of instance.getStoragesByType(StorageType.Output)) {
-                // filter out outputs with no inputs - e.g. cobble gens, vanilla farms
-                const recipeTypeGivenOutput = instance._recipeTypes.filter(type => type.output === outputInv);
-                if (recipeTypeGivenOutput.length > 0) {
-                    // NOTE: include this in doc - set a recipe with no input to empty string else wont get detected
-                    // leading to a mass of items in storage unintentionally
-                    for (const recipeType of recipeTypeGivenOutput) 
-                        if (recipeType.input !== "") {
-                            instance.moveItemToMany(outputInv, asLuaSet);
-                        }
-                }
-            }
+            for (const recipeType of instance._recipeTypes)
+                // do not take items from an output with no input
+                // eg. cobble gens, vanilla farms
+                // NOTE: include this in doc - set a recipe with no input to empty string else wont get detected
+                // leading to a mass of items in storage unintentionally
+                if (recipeType.input !== "") instance.moveItemToMany(recipeType.output, asLuaSet);
         }
         instance.moveItemToMany(instance.settings.inputChest, instance.getStoragesByType(StorageType.Storage));
     },
@@ -573,7 +574,7 @@ const main = () => {
             process(instance);
         } else print("Invalid mode!")
         sleep(instance.settings.period);
-        if (DEBUG) instance.showLog();
+        instance.showLog();
     }
 }
 

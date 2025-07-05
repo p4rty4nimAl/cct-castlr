@@ -19,7 +19,7 @@ export const input = (prompt: string, options: InputOptions = {}) => {
     write(prompt);
     return read(options.replaceChar, options.history, options.completeFn, options.presetInput);
 }
-export const splitString = (value: string, separator: string = ":") => {
+export const splitString = (value: string, separator: string) => {
     const splitStrings = [];
     let buffer = "";
     while (value.length !== 0) {
@@ -39,7 +39,7 @@ export const intValidator = (min: number, max: number) => (int: string) => {
     return (maybeInt !== undefined) && min <= maybeInt && maybeInt <= max;
 }
 
-export const namespaceValidator = (string: string) => splitString(string).length === 2;
+export const namespaceValidator = (string: string) => splitString(string, ":").length === 2;
 
 export const orderStrings = (uniqueStrings: LuaSet<string>): string[] => {
     // order item names for efficient searching
