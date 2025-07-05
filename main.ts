@@ -1,10 +1,6 @@
-// import * as event from "./event";
-
-// Put your code here
-// utils
-
-import { pretty_print } from "cc.pretty";
 import { writeFile, readFile, splitString, input, menu, correctableInput, namespaceValidator, intValidator, paginator, endsWith, orderStrings, stringCompletor } from "./utils";
+
+const DEBUG = false;
 
 /** @noSelf */
 declare class KeyboardPeripheral implements IPeripheral {
@@ -65,19 +61,17 @@ class Inventory {
     *getNextAvailableSlot(name: string) {
         // check all slots of item - if none work, return empty slot
         const slotCounts = this.slots.get(name);
-        if (slotCounts !== undefined) {
-            for (const [slot, count] of slotCounts) {
-                if (count < this.maxSlotCapacity) {
+        if (slotCounts !== undefined)
+            for (const [slot, count] of slotCounts)
+                if (count < this.maxSlotCapacity)
                     yield slot;
-                }
-            }
-        }
         // return slot if empty, inventories are 1-indexed
         for (const i of $range(1, this.size))
             if (this._list[i] === undefined) {
                 yield i;
                 yield* this.getNextAvailableSlot(name);
             }
+        print(`${peripheral.getName(this._peripheral)} is too full for ${name}`);
         return -1;
     }
     pushItems(to: string, slot: number, limit: number, toSlot: number) {
@@ -122,6 +116,7 @@ class Data {
     _recipes: Recipe[];
     settings: Settings;
     _storagesByType: { [index in StorageType]: LuaSet<string> }
+    _log: string[] = [];
 
     constructor() {
         this._inventories = new LuaMap();
@@ -344,9 +339,15 @@ class Data {
         }
         return $multi(itemsGathered, recipes);
     }
+    log = (prefix: string) => (val: string) => this._log.push(`${prefix}: ${val}`);
+    showLog = () => {
+        if (!DEBUG) return;
+        paginator(this._log);
+        this._log = [];
+    }
 }
 const submenus = {
-    C(instance: Data) {
+    C: (instance: Data) => {
         const outputChest = instance._inventories.get(instance.settings.outputChest)
         const max = outputChest.maxSlotCapacity * outputChest.size;
         const orderedAllowedItems = instance.getOrderedItemNames();
@@ -502,6 +503,7 @@ const submenus = {
         const [ amountToTake ] = correctableInput([ "amount to take" ], [ intValidator(0, max) ], [ undefined ]);
         const intToTake = tonumber(amountToTake);
         if (intToTake === 0) return;
+        instance.log("TAKE")(`taking ${intToTake} x ${name}`);
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, intToTake);
     },
     L: (instance: Data) => {
@@ -539,6 +541,7 @@ const main = () => {
             process(instance);
         } else print("Invalid mode!")
         sleep(instance.settings.period);
+        if (DEBUG) instance.showLog();
     }
 }
 
@@ -548,4 +551,9 @@ main();
 /*
 make documentation, suggest human:input recipe type
     - allows to drop settings.inputChest + outputChest from most/some special considerations
+BUGS:
+    craft
+IDEAS:
+    try catch main loop
+    catch errors, log somewhere? do not crash
 */
