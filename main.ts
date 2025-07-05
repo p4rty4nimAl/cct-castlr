@@ -453,7 +453,7 @@ const submenus = {
                         "output chest ID"
                     ],
                     [ namespaceValidator ],
-                    [ stringCompletor(orderedAllowedItems), stringCompletor(orderedAllowedInventories), stringCompletor(orderedAllowedInventories) ]
+                    [ , stringCompletor(orderedAllowedInventories), stringCompletor(orderedAllowedInventories) ]
                 );
                 const saveLocation = fs.combine("./types/", `${splitString(typeID, ":")[1]}.json`);
                 writeFile(saveLocation, textutils.serializeJSON({ typeID, input: inputChest, output: outputChest }));
