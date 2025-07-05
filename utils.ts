@@ -68,21 +68,18 @@ export const stringCompletor = (orderedAllowedValues: string[]) => {
 
 export const correctableInput = (strings: string[], conditions: (((maybeValid: string) => boolean) | undefined)[] = [], completeFns: (((this: void, partial: string) => string[]) | undefined)[]): LuaMultiReturn<string[]> => {
     const defaultValues: string[] = [];
-    let correct = "N";
-    while (correct !== "Y") {
+    do {
         let i = 0;
         while (i < strings.length) {
             // formatting
             const newValue = input(`Enter - ${strings[i]}\: `, { presetInput: defaultValues[i], completeFn: completeFns[i] });
-            // validation - we can: accept new input, retry new input
+            // accept input if valid or no condition
             if (conditions[i] === undefined || conditions[i](newValue)) {
-                // accept new input
                 defaultValues[i] = newValue;
                 i++;
             } // else retry
         }
-        correct = input("Is the above correct? (Y/N): ");
-    }
+    } while (input("Is the above correct? (Y/N): ") !== "Y");
     return $multi(...defaultValues);
 }
 export const menu = (displayText: string[]): string => {
