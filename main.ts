@@ -41,10 +41,12 @@ class Inventory {
     maxSlotCapacity: number;
     // map of (item name) to (map of (slot index) to (item count))
     slots: LuaMap<string, SlotCounts>;
+    name: string;
 
     constructor(peripheralName: string, type: StorageType, size?: number) {
         this._peripheral = peripheral.wrap(peripheralName) as InventoryPeripheral;
         this.type = type;
+        this.name = peripheralName;
         this.size = (size === undefined) ? this._peripheral.size() : size;
         this.maxSlotCapacity = this._peripheral.getItemLimit(1);
         this.regenerateData();
