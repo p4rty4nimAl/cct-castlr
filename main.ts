@@ -413,11 +413,16 @@ const submenus = {
             // submit items to crafter
             // repeat (recipe mult) times, round robin to allow for recipes with specific order
             // prevents overload of too many of the same item preventing the recipe being completed
-            // TODO: may need gating behind a recipe flag, if slow
-            for (const i of $range(1, currentRecipe.count))
+            if (currentRecipe.input.length > 1) {
+                for (const i of $range(1, currentRecipe.count))
+                    for (const inputItem of currentRecipe.input)
+                        if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count))
+                            print(`Error crafting ${currentRecipe.output.name}`);
+            } else {
                 for (const inputItem of currentRecipe.input)
-                    if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count))
-                        print(`Error crafting ${currentRecipe.output.name}`);
+                        if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * currentRecipe.count))
+                            print(`Error crafting ${currentRecipe.output.name}`);
+            }
             let timer = 0;
             const targetItem = { name: currentRecipe.output.name, count: currentRecipe.output.count * currentRecipe.count}
             while (currentOutputChest.getItemCount(targetItem.name) < targetItem.count) {
