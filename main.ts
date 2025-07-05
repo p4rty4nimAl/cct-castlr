@@ -74,7 +74,21 @@ class Inventory {
         print(`${peripheral.getName(this._peripheral)} is too full for ${name}`);
         return -1;
     }
-    pushItems(to: string, slot: number, limit: number, toSlot: number) {
+    recieveItems(name: string, slot: number, count: number) {
+        // update this.slots
+        const slotCounts = this.slots.get(name)
+        const currentAmount = slotCounts.get(slot)
+        if (currentAmount !== undefined) {
+            if (currentAmount + count > this.maxSlotCapacity) {
+                print("issue - recieveItems called with excessive value")
+            }
+            slotCounts.set(slot, currentAmount + count);
+        }
+        // update this._list
+        if (this._list[slot].name !== name) print("issue - recieveItems called with wrong name");
+        this._list[slot].count += count;
+    }
+    pushItems(to: Inventory, fromSlot: number, limit?: number, toSlot?: number) {
         if (this.type === StorageType.Input) {
             print("Attempting to push items from an input storage");
             input("chance to terminate here")
