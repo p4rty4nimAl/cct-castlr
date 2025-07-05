@@ -47,9 +47,7 @@ class Inventory {
         this._peripheral = peripheral.wrap(peripheralName) as InventoryPeripheral;
         this.type = type;
         this.name = peripheralName;
-        if (size === undefined) {
-            this.size = this._peripheral.size()
-        } else this.size = size;
+        this.size = size ?? this._peripheral.size();
         this.maxSlotCapacity = this._peripheral.getItemLimit(1);
         this.regenerateData();
     }
@@ -86,7 +84,7 @@ class Inventory {
             currentSlots = new LuaMap();
             this.slots.set(name, currentSlots);
         }
-        const newAmount = currentSlots.get(slot) + count;
+        const newAmount = (currentSlots.get(slot) ?? 0) + count;
         // if (currentAmount + count > this.maxSlotCapacity) DEBUG && print("issue - recieveItems called with excessive value");
         currentSlots.set(slot, newAmount);
         // update this._list
@@ -104,7 +102,7 @@ class Inventory {
             input("chance to terminate here")
         }
         const itemToMove = this._list[fromSlot];
-        if (limit === undefined) limit = itemToMove.count;
+        limit = limit ?? (itemToMove.count ?? 0);
         let totalMoved = 0;
         const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
         while (totalMoved < limit) {
@@ -160,13 +158,13 @@ class Data {
             [StorageType.NotInput]: new LuaSet()
         };
     }
-    init = () => {
+    init() {
         print("Initalising..")
         // load settings
         this.settings = textutils.unserialiseJSON(readFile("./settings.json"));
-        if (this.settings.period === undefined) this.settings.period = 1;
-        if (this.settings.inputChest === undefined) this.settings.inputChest = "left";
-        if (this.settings.outputChest === undefined) this.settings.outputChest = "right";
+        this.settings.period = this.settings.period ?? 1;
+        this.settings.inputChest = this.settings.inputChest ?? "left";
+        this.settings.outputChest = this.settings.outputChest ?? "right";
         writeFile("./settings.json", textutils.serialiseJSON(this.settings));
 
         // load recipes / types, get storage types
@@ -199,12 +197,17 @@ class Data {
             this._inventories.set(name, new Inventory(name, sType));
         }
     }
-    _addRecipe = (recipe: Recipe) => {
+    _addRecipe(recipe: Recipe) {
+        let hasExistingType = false;
         for (const existingType of this._recipeTypes)
             if (recipe.typeID === existingType.typeID) {
-                print("Recipe type must be declared before adding a recipe using it.");
-                return;
+                hasExistingType = true;
+                break;
             }
+        if (!hasExistingType) {
+            print("Recipe type must be declared before adding a recipe using it.");
+            return;
+        }
         for (const existingRecipe of this._recipes)
             if (recipe.output.name === existingRecipe.output.name) {
                 print("Recipes with outputs matching another are not allowed.");
@@ -212,7 +215,7 @@ class Data {
             }
         this._recipes.push(recipe);
     }
-    _addRecipeType = (recipeType: RecipeType) => {
+    _addRecipeType(recipeType: RecipeType) {
         for (const existingType of this._recipeTypes)
             if (existingType.typeID === recipeType.typeID) {
                 print("Recipe types with types matching another are not allowed.");
@@ -221,7 +224,7 @@ class Data {
         this._recipeTypes.push(recipeType);
         this._loadRecipesFromDirectory(fs.combine('./recipes/', splitString(recipeType.typeID, ":")[1]));
     }
-    _loadRecipesFromDirectory = (directory: string) => {
+    _loadRecipesFromDirectory(directory: string) {
         const files = fs.list(directory);
         for (const i of $range(0, files.length - 1)) {
             const filePath = fs.combine(directory, files[i]);
@@ -229,7 +232,7 @@ class Data {
                 this._addRecipe(textutils.unserialiseJSON(readFile(filePath)) as Recipe);
         }
     }
-    loadRecipeTypesFromDirectory = (directory: string) => {
+    loadRecipeTypesFromDirectory(directory: string) {
         this._recipeTypes = [];
         this._recipes = [];
         const files = fs.list(directory);
@@ -239,13 +242,13 @@ class Data {
                 this._addRecipeType(textutils.unserialiseJSON(readFile(filePath)) as RecipeType);
         }
     }
-    getTotalItemCount = (name: string) => {
+    getTotalItemCount(name: string) {
         let total = 0;
         for (const [ ,inventory] of this._inventories)
             total += inventory.getItemCount(name);
         return total;
     }
-    getAllItems = (): LuaMap<string, number> => {
+    getAllItems(): LuaMap<string, number> {
         const itemMap = new LuaMap<string, number>();
         for (const [, inv] of this._inventories)
             for (const [name, ] of inv.slots) {
@@ -254,44 +257,44 @@ class Data {
             }
         return itemMap;
     }
-    getOrderedItemNames = (): string[] => {
+    getOrderedItemNames(): string[] {
         const uniqueNames = new LuaSet<string>()
         for (const [, inv] of this._inventories)
             for (const [name, ] of inv.slots)
                 uniqueNames.add(name);
         return orderStrings(uniqueNames);
     }
-    getOrderedInventoryNames = (): string[] => {
+    getOrderedInventoryNames(): string[] {
         const uniqueNames = new LuaSet<string>();
         for (const [name, ] of this._inventories)
             uniqueNames.add(name);
         return orderStrings(uniqueNames);
     }
-    getOrderedRecipeNames = (): string[] => {
+    getOrderedRecipeNames(): string[] {
         const uniqueNames = new LuaSet<string>();
         for (const recipe of this._recipeTypes)
             uniqueNames.add(recipe.typeID);
         return orderStrings(uniqueNames);
     }
-    getStoragesByType = (type: StorageType) => {
+    getStoragesByType(type: StorageType) {
         if (type !== StorageType.NotInput)
             return this._storagesByType[type];
         const storages = this._storagesByType[StorageType.Storage];
         for (const storage in this._storagesByType[StorageType.Output]) storages.add(storage);
         return storages;
     }
-    getRecipeType = (typeID: RecipeTypeIdentifier) => {
+    getRecipeType(typeID: RecipeTypeIdentifier) {
         // typeID unique, return either matching recipe or undefined.
         for (const recipeType of this._recipeTypes)
             if (recipeType.typeID === typeID) return recipeType;
     }
-    getRecipe = (output: string) => {
+    getRecipe(output: string) {
         // output name unique, return either matching recipe or undefined.
         for (const recipe of this._recipes)
             if (recipe.output.name === output) return recipe;
     }
     // output -> storage, specific item
-    moveItemFromOne = (from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean => {
+    moveItemFromOne(from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean {
         const srcInv = this._inventories.get(from);
         const srcSlots = srcInv.slots.get(name);
         if (srcSlots === undefined) return false;
@@ -306,7 +309,7 @@ class Data {
         return false;
     }
     // storage -> input
-    moveItemFromMany = (from: LuaSet<string>, to: string, name: string, limit: number): boolean => {
+    moveItemFromMany(from: LuaSet<string>, to: string, name: string, limit: number): boolean {
         // const log = this.log("MIFM")
         const destInv = this._inventories.get(to);
         // for each source inventory
@@ -327,7 +330,7 @@ class Data {
         return false;
     }
     // output -> storage
-    moveItemToMany = (from: string, to: LuaSet<string>) => {
+    moveItemToMany(from: string, to: LuaSet<string>) {
         const srcInv = this._inventories.get(from);
         for (const destStr of to) {
             // for each dest inventory
@@ -337,7 +340,7 @@ class Data {
                 srcInv.pushItems(destInv, fromSlot)
         }
     }
-    gatherIngredients = (name: string, count: number) => {
+    gatherIngredients(name: string, count: number) {
         const itemsToGather: SlotDetail[] = [];
         const itemsGathered: LuaMap<string, number> = new LuaMap();
         const recipes: (Recipe & {count: number})[] = [];
@@ -345,8 +348,7 @@ class Data {
         while (itemsToGather.length !== 0) {
             const currentOutput = itemsToGather.pop();
             // determine amount to craft, accounting for items in use by the recipe so far
-            let currentUsage = itemsGathered.get(currentOutput.name);
-            if (currentUsage === undefined) currentUsage = 0;
+            const currentUsage = itemsGathered.get(currentOutput.name) ?? 0;
             const totalCount = this.getTotalItemCount(currentOutput.name);
             const craftAmount = currentOutput.count - totalCount - currentUsage;
             if (craftAmount > 0) {
@@ -370,17 +372,19 @@ class Data {
         }
         return $multi(itemsGathered, recipes);
     }
-    log = (prefix: string) => (val: string) => {
-        this._log.push(`${prefix}: ${val}`);
-    }
-    showLog = () => {
+    log(prefix: string) {
+        return (val: string) => {
+            this._log.push(`${prefix}: ${val}`);
+        }
+    } 
+    showLog() {
         if (!DEBUG) return;
         paginator(this._log);
         this._log = [];
     }
 }
 const submenus = {
-    C: (instance: Data) => {
+    C(instance: Data) {
         const outputChest = instance._inventories.get(instance.settings.outputChest)
         const max = outputChest.maxSlotCapacity * outputChest.size;
         const orderedAllowedItems = instance.getOrderedItemNames();
@@ -443,7 +447,7 @@ const submenus = {
         }
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, tonumber(count));
     },
-    A: (instance: Data) => {
+    A(instance: Data) {
         const submenuText = [
             "   T - add new type.",
             "   R - add new recipe.",
@@ -478,10 +482,8 @@ const submenus = {
                     [ stringCompletor(orderedAllowedRecipes), stringCompletor(orderedAllowedItems)]
                 );
                 let inputCount = -1;
-                while (!(0 < inputCount && inputCount < 10)) {
-                    inputCount = tonumber(input("Enter - recipe input count (1-9): "));
-                    if (inputCount === undefined) inputCount = -1;
-                }
+                while (!(0 < inputCount && inputCount < 10))
+                    inputCount = tonumber(input("Enter - recipe input count (1-9): ")) ?? -1;
                 const inputStrings = [];
                 const validationFuncs = [];
                 const completionFuncs = [];
@@ -507,7 +509,7 @@ const submenus = {
         if (process !== undefined) process();
         instance.loadRecipeTypesFromDirectory("./types/");
     },
-    S: (instance: Data) => {
+    S(instance: Data) {
         const shouldClearOutputs = input("Also store items from outputs? (Y/N): ") === "Y";
         if (shouldClearOutputs) {
             const asLuaSet = new LuaSet<string>();
@@ -521,7 +523,7 @@ const submenus = {
         }
         instance.moveItemToMany(instance.settings.inputChest, instance.getStoragesByType(StorageType.Storage));
     },
-    T: (instance: Data) => {
+    T(instance: Data) {
         const allowedOrderedItems = instance.getOrderedItemNames();
         const [ name ] = correctableInput(
             [ "item name" ], 
@@ -539,16 +541,18 @@ const submenus = {
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, intToTake);
     },
-    L: (instance: Data) => {
+    L(instance: Data) {
         const map = instance.getAllItems();
         const strings = [];
         for (const [ name, count ] of map)
             strings.push(`${count} x ${name}`);
         paginator(strings);
     },
-    R: (instance: Data) => instance.init()
+    R(instance: Data) {
+        instance.init();
+    }
 }
-const main = () => {
+function main() {
     term.clear();
     term.setCursorPos(1, 1);
     for (const keyboard of peripheral.find("tm_keyboard"))

@@ -1,3 +1,5 @@
+/** @noSelfInFile **/
+
 export const writeFile = (path: string, data: string) => {
     const file = fs.open(path, "w")[0];
     file.write(data);
