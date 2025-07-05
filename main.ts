@@ -93,20 +93,47 @@ class Inventory {
             print("Attempting to push items from an input storage");
             input("chance to terminate here")
         }
-        const amountMoved = this._peripheral.pushItems(to, slot, limit, toSlot);
-        const amountInSlot = this._list[slot].count;
-        let newVal = amountInSlot - amountMoved;
-        if (newVal === 0) newVal = undefined;
-        this._list[slot].count = newVal;
-        
-        if (amountMoved !== 0) {
-            for (const [, slotCounts] of this.slots) {
-                // slotCounts.get(slot) returns either the value in the correct slot, or undefined if not in the correct item group
-                const amountInSlot = slotCounts.get(slot);
-                if (amountInSlot !== undefined) slotCounts.set(slot, newVal);
+        const itemToMove = this._list[fromSlot];
+        if (limit === undefined) limit = itemToMove.count;
+        if (toSlot === undefined) {
+            let totalMoved = 0;
+            const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
+            while (totalMoved > limit) {
+                const nextSlot = slotGenerator.next();
+                if (nextSlot.done) return totalMoved;
+                toSlot = nextSlot.value;
+                const amountMoved = this._peripheral.pushItems(to.name, fromSlot, limit - totalMoved, toSlot);
+                totalMoved += amountMoved;
+                // sync stored data in src
+                if (itemToMove.count === amountMoved) {
+                    // delete
+                    this.slots.get(itemToMove.name).delete(fromSlot);
+                    this._list[fromSlot] = undefined;
+                } else if (amountMoved !== 0) {
+                    // update
+                    const amountInSlot = itemToMove.count;
+                    this.slots.get(itemToMove.name).set(fromSlot, amountInSlot - amountMoved);
+                    this._list[fromSlot].count -= amountMoved;
+                }
+                // sync stored data in dest
+                to.recieveItems(itemToMove.name, toSlot, amountMoved);
             }
+            return totalMoved;
+        } else {
+            const amountMoved = this._peripheral.pushItems(to.name, fromSlot, limit, toSlot);
+            if (itemToMove.count === amountMoved) {
+                // delete
+                this.slots.get(itemToMove.name).delete(fromSlot);
+                this._list[fromSlot] = undefined;
+            } else if (amountMoved !== 0) {
+                // update
+                const amountInSlot = itemToMove.count;
+                this.slots.get(itemToMove.name).set(fromSlot, amountInSlot - amountMoved);
+                this._list[fromSlot].count -= amountMoved;
+            }
+            to.recieveItems(itemToMove.name, toSlot, amountMoved);
+            return amountMoved;
         }
-        return amountMoved;
     }
     regenerateData() {
         this.slots = new LuaMap();
