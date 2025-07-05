@@ -289,64 +289,48 @@ class Data {
         // typeID unique, return either matching recipe or undefined.
         return this._recipeTypes.filter(recipe => recipe.typeID === typeID)[0];
     }
-    moveItemFromOne = (from: string, to: LuaSet<string> | [string], name: string, count: number): boolean => {
+    // output -> storage, specific item
+    moveItemFromOne = (from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean => {
         const srcInv = this._inventories.get(from);
-        for (const destInvStr of to) {
-            const destInv = this._inventories.get(destInvStr);
-            const availableSlots = destInv.getNextAvailableSlot(name);
-            let nextVal = {} as { value: number, done?: boolean};
-            if (srcInv.slots.get(name) !== undefined) {
-                for (const [slot, ] of srcInv.slots.get(name)) {
-                    nextVal = availableSlots.next();
-                    if (count <= 0) return true;
-                    // no more slots available in destination - use next inventory
-                    if (nextVal.done) break;
-                    count -= srcInv.pushItems(destInvStr, slot, count, nextVal.value);
-                }
-                if (nextVal.done) break;
+        const srcSlots = srcInv.slots.get(name);
+        if (srcSlots === undefined) return false;
+        let amountMoved = 0;
+        for (const destStr of to) {
+            const destInv = this._inventories.get(destStr);
+            for (const [fromSlot, ] of srcSlots) {
+                amountMoved += srcInv.pushItems(destInv, fromSlot, limit)
+                if (amountMoved === limit) return true;
             }
         }
-        return count <= 0;
+        return false;
     }
-    moveItemFromMany = (from: LuaSet<string>, to: string, name: string, count: number): boolean => {
+    // storage -> input
+    moveItemFromMany = (from: LuaSet<string>, to: string, name: string, limit: number): boolean => {
         const destInv = this._inventories.get(to);
-        const availableSlots = destInv.getNextAvailableSlot(name);
-        let nextVal = {} as { value: number, done?: boolean};
+        // for each source inventory
         for (const srcInvStr of from) {
             const srcInv = this._inventories.get(srcInvStr);
-            if (srcInv.slots.get(name) !== undefined) {
-                for (const [slot, ] of srcInv.slots.get(name)) {
-                    nextVal = availableSlots.next();
-                    // no more slots available in destination - move to next / fail
-                    if (nextVal.done) break;
-                    count -= srcInv.pushItems(to, slot, count, nextVal.value);
-                    if (count <= 0) return true;
+            const slotCounts = srcInv.slots.get(name);
+            if (slotCounts !== undefined)
+                // for every slot in inventory, given it is defined
+                for (const [fromSlot, ] of slotCounts) {
+                    // move items to destination, up to limit - new limit = old limit - amount moved
+                    limit -= srcInv.pushItems(destInv, fromSlot, limit);
+                    if (limit <= 0) return true;
                 }
-                // no more slots available in destination - fail
-                if (nextVal.done) break;
-            }
         }
-        return count <= 0;
+        return false;
     }
+    // output -> storage
     moveItemToMany = (from: string, to: LuaSet<string>) => {
-        // 1-m transfer
-        // scummy function abusing internals
-        const inv = this._inventories.get(from);
-        // reset if output as items may be untracked
-        if (inv.type === StorageType.Output) inv.regenerateData();
-        const srcInv = inv._peripheral;
-        const srcInvList = this._inventories.get(from)._list;
-        for (const destInv of to) {
-            let currentDirty = false;
-            for (const [slot, ] of pairs(srcInvList)) {
-                const amountMoved = srcInv.pushItems(destInv, slot);
-                if (amountMoved !== 0) currentDirty = true;
-                srcInvList[slot].count -= amountMoved;
-                if (srcInvList[slot].count === 0) srcInvList[slot] = undefined;
-            }
-            if (currentDirty) this._inventories.get(destInv).regenerateData();
+        const srcInv = this._inventories.get(from);
+        for (const destStr of to) {
+            // for each dest inventory
+            const destInv = this._inventories.get(destStr);
+            for (const [fromSlot, ] of pairs(srcInv._list))
+                // push items from source to destination
+                srcInv.pushItems(destInv, fromSlot)
         }
-        inv.regenerateData();
     }
     gatherIngredients = (name: string, count: number) => {
         const itemsToGather: SlotDetail[] = [];
