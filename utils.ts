@@ -34,7 +34,10 @@ export const splitString = (value: string, separator: string = ":") => {
     splitStrings.push(buffer);
     return splitStrings;
 }
-export const intValidator = (min: number, max: number) => (int: string) => min <= tonumber(int) && tonumber(int) <= max;
+export const intValidator = (min: number, max: number) => (int: string) => {
+    const maybeInt = tonumber(int);
+    return (maybeInt !== undefined) && min <= maybeInt && maybeInt <= max;
+}
 
 export const namespaceValidator = (string: string) => splitString(string).length === 2;
 
