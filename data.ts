@@ -184,11 +184,9 @@ export class Data {
     }
     // storage -> input
     moveItemFromMany(from: LuaSet<string>, to: string, name: string, limit: number): boolean {
-        // const log = this.log("MIFM")
         const destInv = this._inventories.get(to);
         // for each source inventory
         for (const srcInvStr of from) {
-            // log(`Using srcInvStr: ${srcInvStr}`)
             const srcInv = this._inventories.get(srcInvStr);
             const slotCounts = srcInv.getSlots().get(name);
             if (slotCounts !== undefined)
@@ -197,14 +195,13 @@ export class Data {
                 for (const [fromSlot, ] of slotCounts) {
                     // move items to destination, up to limit - new limit = old limit - amount moved
                     limit -= srcInv.pushItems(destInv, fromSlot, limit);
-                    // log(`moved items, new limit = ${limit}`)
                     if (limit <= 0) return true;
                 }
         }
         return false;
     }
     // output -> storage
-    moveItemToMany(from: string, to: LuaSet<string>) {
+    moveOneToMany(from: string, to: LuaSet<string>) {
         const srcInv = this.getInventory(from);
         for (const destStr of to) {
             // for each dest inventory
