@@ -5,7 +5,8 @@
         "lib": ["ESNext"],
         "moduleResolution": "node",
         "strict": false,
-        "types": ["@jackmacwindows/lua-types/cc-5.2", "@jackmacwindows/craftos-types", "@jackmacwindows/cc-types", "./castlr.d.ts"]
+        "types": ["@jackmacwindows/lua-types/cc-5.2", "@jackmacwindows/craftos-types", "@jackmacwindows/cc-types", "./castlr.d.ts"],
+        "noImplicitAny": true
     },
     "tstl": {
         "luaTarget": "CC-5.2",
