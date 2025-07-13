@@ -124,8 +124,9 @@ export class Data {
             }
         return itemMap;
     }
-    getOrderedItemNames(): string[] {
-        const uniqueNames = new LuaSet<string>()
+    getOrderedItemNames(insertedValues?: string[]): string[] {
+        const uniqueNames = new LuaSet<string>();
+        if (insertedValues !== undefined) for (const value of insertedValues) uniqueNames.add(value);
         for (const [, inv] of this._inventories)
             for (const [name, ] of inv.getSlots())
                 uniqueNames.add(name);
@@ -159,6 +160,9 @@ export class Data {
         // output name unique, return either matching recipe or undefined.
         for (const recipe of this._recipes)
             if (recipe.output.name === output) return recipe;
+    }
+    getAllRecipes() {
+        return this._recipes;
     }
     getInventory(name: string) {
         return this._inventories.get(name);

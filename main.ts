@@ -15,7 +15,10 @@ namespace submenus {
     export function C(instance: Data) {
         const outputChest = instance.getInventory(instance.settings.outputChest)
         const max = outputChest.getItemLimit(1) * outputChest.size();
-        const items = instance.getOrderedItemNames();
+        const craftableItems = [];
+        for (const recipe of instance.getAllRecipes())
+            craftableItems.push(recipe.output.name);
+        const items = instance.getOrderedItemNames(craftableItems);
         const [ name, count ] = correctableInput(
             ["item to craft", "amount to craft"], 
             [namespaceValidator, intValidator(1, max)],
