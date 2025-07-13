@@ -118,7 +118,7 @@ export class Data {
     getAllItems(): LuaMap<string, number> {
         const itemMap = new LuaMap<string, number>();
         for (const [, inv] of this._inventories)
-            for (const [name, ] of inv.slots) {
+            for (const [name, ] of inv.getSlots()) {
                 const newCount = (itemMap.get(name) ?? 0) + inv.getItemCount(name);
                 itemMap.set(name, newCount);
             }
@@ -127,7 +127,7 @@ export class Data {
     getOrderedItemNames(): string[] {
         const uniqueNames = new LuaSet<string>()
         for (const [, inv] of this._inventories)
-            for (const [name, ] of inv.slots)
+            for (const [name, ] of inv.getSlots())
                 uniqueNames.add(name);
         return orderStrings(uniqueNames);
     }
@@ -166,7 +166,7 @@ export class Data {
     // output -> storage, specific item
     moveItemFromOne(from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean {
         const srcInv = this._inventories.get(from);
-        const srcSlots = srcInv.slots.get(name);
+        const srcSlots = srcInv.getSlots().get(name);
         if (srcSlots === undefined) return false;
         let amountMoved = 0;
         for (const destStr of to) {
@@ -186,7 +186,7 @@ export class Data {
         for (const srcInvStr of from) {
             // log(`Using srcInvStr: ${srcInvStr}`)
             const srcInv = this._inventories.get(srcInvStr);
-            const slotCounts = srcInv.slots.get(name);
+            const slotCounts = srcInv.getSlots().get(name);
             if (slotCounts !== undefined)
                 // log(`slotCounts defined`)
                 // for every slot in inventory, given it is defined
