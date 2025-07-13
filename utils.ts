@@ -107,6 +107,41 @@ export const paginator = (lines: string[], height: number = term.getSize()[1], )
             currentPage = nextPageInt - 1;
         } else currentPage++;
         if (currentPage >= totalPages) running = false;
+/**
+ * Finds strings that contain the query in the search space.
+ * @param searchSpace A string array to search within for query matches.
+ * @param query The query to find within each string in the given array.
+ * @returns The matching values.
+ */
+export const stringSearch = (searchSpace: string[], query: string): string[] => {
+    const matches = [];
+    const queryRegex = `.*${query}.*`;
+    for (const haystack of searchSpace)
+        if (string.find(haystack, queryRegex)[0] !== undefined)
+            matches.push(haystack);
+    return matches;
+}
+/**
+ * Allow a user to search a large amount of text at their own pace.
+ * @param lines The strings to search through.
+ * @param height The maximum amount of strings to display at once.
+ */
+export const searchLines = (lines: string[], height: number = term.getSize()[1]) => {
+    // move existing text out of the way
+    term.scroll(height - 2);
+    let offset = 0;
+    const callback = (partial: string, event?: LuaMultiReturn<[string, ...any[]]>) => {
+        const matchingLines = stringSearch(lines, partial);
+        while (matchingLines[offset] === undefined && offset !== 0) offset--;
+        if (event !== undefined && event[0] === "key") {
+            if (event[1] === keys.down && matchingLines[height + offset + 1] !== undefined) offset++;
+            if (event[1] === keys.up && matchingLines[offset - 1] !== undefined) offset--;
+        }
+        write("\n");
+        for (const i of $range(0, height - 2))
+            print(matchingLines[i + offset] ?? "");
     }
+    callback("");
+    readline("Enter search query: ", callback);
 }
 export const endsWith = (value: string, suffix: string) => string.sub(value, -suffix.length) === suffix;

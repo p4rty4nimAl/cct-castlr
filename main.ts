@@ -7,7 +7,9 @@ import {
     namespaceValidator,
     intValidator,
     paginator,
-    stringCompletor
+    stringCompletor,
+    searchLines,
+    orderStrings
 } from "./utils";
 import { Data } from "./data";
 
@@ -181,10 +183,10 @@ const submenus = {
     },
     L(instance: Data) {
         const map = instance.getAllItems();
-        const strings = [];
+        const strings = new LuaSet<string>();
         for (const [ name, count ] of map)
-            strings.push(`${count} x ${name}`);
-        paginator(strings);
+            strings.add(`${name} x ${count}`);
+        searchLines(orderStrings(strings));
     },
     R(instance: Data) {
         instance.init();
