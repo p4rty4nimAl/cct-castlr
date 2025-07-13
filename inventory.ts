@@ -170,7 +170,6 @@ export class Inventory {
         limit = limit ?? (itemToMove.count ?? 0);
         let totalMoved = 0;
         const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
-        let moveQueue: (() => void)[] = [];
         while (totalMoved < limit && itemToMove.count !== undefined) {
             const nextSlot = slotGenerator.next();
             if (nextSlot.done) return totalMoved;
