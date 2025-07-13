@@ -84,13 +84,13 @@ export const correctableInput = (strings: string[], conditions: (((maybeValid: s
                 i++;
             } // else retry
         }
-    } while (input("Is the above correct? (Y/N): ") !== "Y");
+    } while (string.upper(input("Is the above correct? (Y/N): ")) !== "Y");
     return $multi(...defaultValues);
 }
 export const menu = (displayText: string[]): string => {
     for (const i of $range(0, displayText.length - 2))
         print(displayText[i]);
-    return input(displayText[displayText.length - 1]);
+    return string.upper(input(displayText[displayText.length - 1]));
 }
 export const paginator = (lines: string[], height: number = term.getSize()[1], ) => {
     const pageSize = height - 2;

@@ -43,10 +43,11 @@ const submenus = {
             paginator(missingStrs);
             return;
         }
-        if (input("Display current store counts? (Y/N): ") === "Y") paginator(currentStoreStrs);
+        if (string.upper(input("Display current store counts? (Y/N): ")) === "Y") paginator(currentStoreStrs);
         print("The following items will be consumed:")
         paginator(itemUseStrs);
         if (input("Is the above correct? (Y/N): ") !== "Y") return;
+        if (string.upper(input("Is the above correct? (Y/N): ")) !== "Y") return;
         while (recipeStack.length !== 0) {
             const currentRecipe = recipeStack.pop();
             const recipeType = instance.getRecipeType(currentRecipe.typeID);
@@ -147,8 +148,8 @@ const submenus = {
         instance.loadRecipeTypesFromDirectory("./types/");
     }
     export function S(instance: Data) {
-        instance.getInventory(instance.settings.inputChest).regenerateData();
-        if (input("Also store items from outputs? (Y/N): ") === "Y") {
+        instance.getInventory(instance.settings.inputChest).syncData();
+        if (string.upper(input("Also store items from outputs? (Y/N): ")) === "Y") {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(instance.settings.inputChest);
             for (const recipeType of instance._recipeTypes)
@@ -233,6 +234,5 @@ BUGS:
 IDEAS:
     try catch main loop
     catch errors, log somewhere? do not crash
-    overall, fix inputs to support lowercase input properly
     parallel crafting?
 */
