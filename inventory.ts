@@ -85,7 +85,7 @@ export class Inventory {
     }
     /**
      * This function exists to keep the cache in sync with the real inventory.
-     * Desyncronisation can be caused by inserting an item into the underlying inventory, in which case this should be called.
+     * Desynchronisation can be caused by inserting an item into the underlying inventory, in which case this should be called.
      * It is automatically handled when using the wrapper to push to another {@link Inventory}.
      */
     recieveItems(name: string, slot: number, count: number) {
@@ -108,10 +108,10 @@ export class Inventory {
         }
     }
     /**
-     * This is to be called when the inventory accesses cannot be syncronised, such as a player inserting or removing items.
+     * This is to be called when the inventory accesses cannot be synchronised, such as a player inserting or removing items.
      * As it calls the underlying inventory peripheral API, it is not particularly fast - use it sparingly.
      * If the source and destination of a pushItems call are stale, it cannot guarantee success.
-     * Therefore, a player-accessed storage must be syncronised before pushing or pulling items.
+     * Therefore, a player-accessed storage must be synchronised before pushing or pulling items.
      */
     syncData() {
         this._slots = new LuaMap();
