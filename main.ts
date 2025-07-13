@@ -11,9 +11,10 @@ import {
 } from "./utils";
 import { Data } from "./data";
 
-namespace submenus {
-    export function C(instance: Data) {
-        const outputChest = instance.getInventory(instance.settings.outputChest)
+const submenus = {
+    C(instance: Data) {
+        const outputChest = instance.getInventory(instance.settings.outputChest);
+        outputChest.syncData();
         const max = outputChest.getItemLimit(1) * outputChest.size();
         const craftableItems = [];
         for (const recipe of instance.getAllRecipes())
@@ -28,12 +29,12 @@ namespace submenus {
         const itemUseStrs = [];
         const missingStrs = [];
         const currentStoreStrs = [];
-        for (const [name, count] of itemsUsed) {
-            if (count !== 0) {
-                const strVal = `${name} x ${count}`;
-                const currentStore = instance.getTotalItemCount(name);
-                currentStoreStrs.push(`${name} x ${currentStore}`);
-                if (currentStore < count) missingStrs.push(strVal);
+        for (const [name, usedCount] of itemsUsed) {
+            if (usedCount !== 0) {
+                const strVal = `${name} x ${usedCount}`;
+                const storeCount = instance.getTotalItemCount(name);
+                currentStoreStrs.push(`${name} x ${storeCount}`);
+                if (storeCount < usedCount) missingStrs.push(strVal);
                 itemUseStrs.push(strVal);
             } 
         }
@@ -74,7 +75,7 @@ namespace submenus {
                 sleep(instance.settings.period);
                 timer += instance.settings.period;
                 print(`Currently crafting: ${targetItem.count} x ${targetItem.name} (${timer}s)\n`);
-                currentOutputChest.regenerateData();
+                currentOutputChest.syncData();
             }
             print(`${targetItem.count} x ${targetItem.name} complete.`);
         }
@@ -175,7 +176,7 @@ namespace submenus {
         const intToTake = tonumber(amountToTake);
         if (intToTake === 0) return;
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
-        instance.getInventory(instance.settings.outputChest).regenerateData();
+        instance.getInventory(instance.settings.outputChest).syncData();
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, intToTake);
     }
     export function L(instance: Data) {
@@ -232,4 +233,6 @@ BUGS:
 IDEAS:
     try catch main loop
     catch errors, log somewhere? do not crash
+    overall, fix inputs to support lowercase input properly
+    parallel crafting?
 */

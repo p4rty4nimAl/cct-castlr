@@ -224,7 +224,8 @@ export class Data {
             // determine amount to craft, accounting for items in use by the recipe so far
             const currentUsage = itemsGathered.get(currentOutput.name) ?? 0;
             const totalCount = this.getTotalItemCount(currentOutput.name);
-            const craftAmount = currentOutput.count - totalCount - currentUsage;
+            // amount to craft = (amount to craft or take) - (available amount)
+            const craftAmount = currentOutput.count - (totalCount - currentUsage);
             if (craftAmount > 0) {
                 // find recipe, use first result (there should only ever be 0 or 1 recipes matching the filter)
                 const recipeToUse = this.getRecipe(currentOutput.name) as Recipe & {count: number}; 
