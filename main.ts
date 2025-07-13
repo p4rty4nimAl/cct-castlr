@@ -46,7 +46,6 @@ const submenus = {
         if (string.upper(input("Display current store counts? (Y/N): ")) === "Y") paginator(currentStoreStrs);
         print("The following items will be consumed:")
         paginator(itemUseStrs);
-        if (input("Is the above correct? (Y/N): ") !== "Y") return;
         if (string.upper(input("Is the above correct? (Y/N): ")) !== "Y") return;
         while (recipeStack.length !== 0) {
             const currentRecipe = recipeStack.pop();
@@ -82,8 +81,8 @@ const submenus = {
         }
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, tonumber(count));
         sleep(instance.settings.period);
-    }
-    export function A(instance: Data) {
+    },
+    A(instance: Data) {
         const submenuText = [
             "   T - add new type.",
             "   R - add new recipe.",
@@ -142,12 +141,12 @@ const submenus = {
                 const saveLocation = fs.combine("./recipes/", splitString(typeID, ":")[1], `${splitString(outputItemID, ":")[1]}.json`);
                 writeFile(saveLocation, textutils.serialiseJSON({ typeID, input: inputItems, output: { name: outputItemID, count: tonumber(outputItemCount) } }));
             }
-        }
+        } as { [index: string]: () => void}
         const process = branches[menu(submenuText)];
         if (process !== undefined) process();
         instance.loadRecipeTypesFromDirectory("./types/");
-    }
-    export function S(instance: Data) {
+    },
+    S(instance: Data) {
         instance.getInventory(instance.settings.inputChest).syncData();
         if (string.upper(input("Also store items from outputs? (Y/N): ")) === "Y") {
             const asLuaSet = new LuaSet<string>();
@@ -160,8 +159,8 @@ const submenus = {
                 if (recipeType.input !== "") instance.moveItemToMany(recipeType.output, asLuaSet);
         }
         instance.moveItemToMany(instance.settings.inputChest, instance.getStoragesByType(StorageType.Storage));
-    }
-    export function T(instance: Data) {
+    },
+    T(instance: Data) {
         const items = instance.getOrderedItemNames();
         const [ name ] = correctableInput(
             [ "item name" ], 
@@ -179,18 +178,18 @@ const submenus = {
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
         instance.getInventory(instance.settings.outputChest).syncData();
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, intToTake);
-    }
-    export function L(instance: Data) {
+    },
+    L(instance: Data) {
         const map = instance.getAllItems();
         const strings = [];
         for (const [ name, count ] of map)
             strings.push(`${count} x ${name}`);
         paginator(strings);
-    }
-    export function R(instance: Data) {
+    },
+    R(instance: Data) {
         instance.init();
     }
-}
+} as {[index: string]: undefined | ((instance: Data) => void)}
 function main() {
     term.clear();
     term.setCursorPos(1, 1);
