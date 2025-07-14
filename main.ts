@@ -49,6 +49,9 @@ const submenus = {
         print("The following items will be consumed:")
         paginator(itemUseStrs);
         if (string.upper(input("Is the above correct? (Y/N): ")) !== "Y") return;
+        // reset for progress bar positioning
+        term.clear();
+        term.setCursorPos(1, 1);
         while (recipeStack.length !== 0) {
             const currentRecipe = recipeStack.pop();
             const recipeType = instance.getRecipeType(currentRecipe.typeID);
@@ -69,19 +72,21 @@ const submenus = {
             for (const _ of $range(1, repeatCount))
                 for (const inputItem of currentRecipe.input)
                     if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier))
+                    if (instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier) < inputItem.count * countMultiplier)
                         print(`Error crafting ${currentRecipe.output.name}`);
-            
-            let timer = 0;
-            const targetItem = { name: currentRecipe.output.name, count: currentRecipe.output.count * currentRecipe.count}
-            while (currentOutputChest.getItemCount(targetItem.name) < targetItem.count) {
-                sleep(instance.settings.period);
-                timer += instance.settings.period;
-                print(`Currently crafting: ${targetItem.count} x ${targetItem.name} (${timer}s)\n`);
+
+            const targetItem = { name: currentRecipe.output.name, count: currentRecipe.output.count * currentRecipe.count };
+            let currentCount;
+            write(`Crafting: ${targetItem.name} x ${targetItem.count} `);
+            const bar = new ProgressBar();
+            do {
                 currentOutputChest.syncData();
-            }
-            print(`${targetItem.count} x ${targetItem.name} complete.`);
+                currentCount = currentOutputChest.getItemCount(targetItem.name);
+                bar.setProgress(currentCount / targetItem.count);
+            } while (currentCount < targetItem.count);
         }
         instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, tonumber(count));
+        print(`Crafted ${name} x ${count}`);
         sleep(instance.settings.period);
     },
     A(instance: Data) {
@@ -230,10 +235,11 @@ main();
 /*
 make documentation, suggest human:input recipe type
     - allows to drop settings.inputChest + outputChest from most/some special considerations
-BUGS:
-    craft
 IDEAS:
     try catch main loop
     catch errors, log somewhere? do not crash
-    parallel crafting?
+    parallel crafting: requires
+        - ui overhaul - progress bars
+        - collate all duplicate crafting recipes in the stack
+        - moving items as they become available over moving them all at once
 */
