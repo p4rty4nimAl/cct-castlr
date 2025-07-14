@@ -47,17 +47,16 @@ export const input = (prompt: string, options: InputOptions = {}) => {
  */
 export const splitString = (value: string, separator: string): string[] => {
     const splitStrings = [];
-    let buffer = "";
-    while (value.length !== 0) {
-        if (string.sub(value, 0, separator.length) === separator) {
-            splitStrings.push(buffer);
-            value = string.sub(value, separator.length);
-            buffer = "";
+    let pointer = 1;
+    do {
+        const [start, finish] = string.find(value, separator, pointer, true);
+        if (start === undefined) {
+            splitStrings.push(string.sub(value, pointer));
+            return splitStrings;
         }
-        buffer += string.sub(value, 1, 1);
-        value = string.sub(value, 2);
-    }
-    splitStrings.push(buffer);
+        splitStrings.push(string.sub(value, pointer, start - 1));
+        pointer = finish + 1;
+    } while (pointer < value.length);
     return splitStrings;
 }
 /**
@@ -102,7 +101,7 @@ export const stringCompletor = (orderedStrs: string[]) => {
         // if no input, return all.
         if (partial.length === 0) return orderedStrs;
         for (const i of $range(0, orderedStrs.length - 1)) {
-            if (string.sub(orderedStrs[i], 0, partial.length) === partial) {
+            if (string.sub(orderedStrs[i], 1, partial.length) === partial) {
                 completeValues.push(string.sub(orderedStrs[i], partial.length + 1));
                 // items found, current item invalid
                 // allowed values sorted - no further values will be valid, can early exit
@@ -306,3 +305,42 @@ export const searchLines = (lines: string[], height: number = term.getSize()[1])
  * @returns Whether the string ends in the given suffix.
  */
 export const endsWith = (value: string, suffix: string) => string.sub(value, -suffix.length) === suffix;
+/**
+ * Progress bar to visually guide user about the progress of a running operation.
+ */
+export class ProgressBar {
+    _x: number;
+    _y: number;
+    _length: number;
+    /**
+     * Create a new progress bar from the current cursor position to the edge of the screen.
+     * @param progress A number from 0 to 1 representing the progress of the bar.
+     */
+    constructor(progress?: number) {
+        // get start of bar
+        const pos = term.getCursorPos();
+        [this._x, this._y] = pos;
+        const [width] = term.getSize();
+        // set length to edge of screen
+        this._length = width - this._x;
+        // set progress / draw empty bar
+        this.setProgress(progress ?? 0);
+        write("\n");
+    }
+
+    /**
+     * Update the drawn bar to the new progress value.
+     * @param progress A number from 0 to 1 representing the progress of the bar.
+     */
+    setProgress(progress: number) {
+        progress = math.min(math.max(0, progress), 1);
+        const [prevCursorX, prevCursorY] = term.getCursorPos();
+        // account for brackets in bar display
+        const barSize = this._length - 2;
+        const filled = math.floor(barSize * progress);
+        const filledString = "*".repeat(filled) + " ".repeat(barSize - filled);
+        term.setCursorPos(this._x, this._y);
+        write(`[${filledString}]`);
+        term.setCursorPos(prevCursorX, prevCursorY);
+    }
+}
