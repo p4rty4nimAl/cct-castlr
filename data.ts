@@ -183,7 +183,7 @@ export class Data {
         return false;
     }
     // storage -> input
-    moveItemFromMany(from: LuaSet<string>, to: string, name: string, limit: number): boolean {
+    moveItemFromMany(from: LuaSet<string>, to: string, name: string, limit: number): number {
         const destInv = this._inventories.get(to);
         // for each source inventory
         for (const srcInvStr of from) {
@@ -195,10 +195,10 @@ export class Data {
                 for (const [fromSlot, ] of slotCounts) {
                     // move items to destination, up to limit - new limit = old limit - amount moved
                     limit -= srcInv.pushItems(destInv, fromSlot, limit);
-                    if (limit <= 0) return true;
+                    if (limit <= 0) return startingLimit;
                 }
         }
-        return false;
+        return startingLimit - limit;
     }
     // output -> storage
     moveOneToMany(from: string, to: LuaSet<string>) {
@@ -242,7 +242,24 @@ export class Data {
             } else itemsGathered.set(currentOutput.name, currentUsage + currentOutput.count);
             
         }
-        return $multi(itemsGathered, recipeStack);
+        // resolve duplicates, preserve order
+        const duplicateRecipes = new LuaMap<string, { firstSeen: number, totalRecipeCount: number }>();
+        for (const i of $range(0, recipeStack.length - 1)) {
+            const recipe = recipeStack[i];
+            const currentData = duplicateRecipes.get(recipe.output.name) ?? { firstSeen: i, totalRecipeCount: 0 };
+            currentData.totalRecipeCount += recipe.count;
+            duplicateRecipes.set(recipe.output.name, currentData);
+        }
+        const newRecipeStack = [];
+        for (const i of $range(0, recipeStack.length - 1)) {
+            const recipe = recipeStack[i];
+            const data = duplicateRecipes.get(recipe.output.name);
+            if (i === data.firstSeen) {
+                recipe.count = data.totalRecipeCount;
+                newRecipeStack.push(recipe);
+            }
+        }
+        return $multi(itemsGathered, newRecipeStack);
     }
     log(prefix: string) {
         return (val: string) => {
