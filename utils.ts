@@ -196,7 +196,7 @@ const readCharacter = (prompt: string, prevInput: string, heldKeys: { ctrl: bool
         // move back 1 char
         b: () => { pointer -= 1 },
         // delete current char
-        d: () => { prevInput = string.sub(prevInput, 1, pointer - 1) + string.sub(prevInput, pointer + 1) },
+        d: () => { prevInput = string.sub(prevInput, 1, pointer) + string.sub(prevInput, pointer + 2) },
         // move to end
         e: () => { pointer = prevInput.length },
         // move forward one char
@@ -230,7 +230,7 @@ const readCharacter = (prompt: string, prevInput: string, heldKeys: { ctrl: bool
         [keys.delete]: ctrlCommands.d,
         [keys.end]: ctrlCommands.e,
         [keys.right]: ctrlCommands.f,
-        [keys.backslash]: ctrlCommands.h
+        [keys.backspace]: ctrlCommands.h
     }
     if (event[0] === "char") {
         prevInput = string.sub(prevInput, 1, pointer) + event[1] + string.sub(prevInput, pointer + 1);
