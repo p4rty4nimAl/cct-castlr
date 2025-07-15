@@ -9,12 +9,14 @@ import {
 import { Inventory } from "./inventory";
 
 const DEBUG = false;
-
+/**
+ * This is the data controller for 
+ */
 export class Data {
     // map of (peripheral name ) to (Inventory)
     _inventories: LuaMap<string, Inventory>;
-    _recipeTypes: RecipeType[];
-    _recipes: Recipe[];
+    _recipeTypes: LuaSet<RecipeType>;
+    _recipes: LuaSet<Recipe>;
     settings: Settings;
     _storagesByType: { [index in StorageType]: LuaSet<string> };
     _log: string[] = [];
@@ -88,7 +90,7 @@ export class Data {
                 print("Recipes with outputs matching another are not allowed.");
                 return;
             }
-        this._recipes.push(recipe);
+        this._recipes.add(recipe);
     }
 
     _addRecipeType(recipeType: RecipeType) {
@@ -97,7 +99,7 @@ export class Data {
                 print("Recipe types with types matching another are not allowed.");
                 return;
             }
-        this._recipeTypes.push(recipeType);
+        this._recipeTypes.add(recipeType);
         this._loadRecipesFromDirectory(fs.combine('./recipes/', splitString(recipeType.typeID, ":")[1]));
     }
 
@@ -109,8 +111,8 @@ export class Data {
     }
 
     loadRecipeTypesFromDirectory(directory: string) {
-        this._recipeTypes = [];
-        this._recipes = [];
+        this._recipeTypes = new LuaSet();
+        this._recipes = new LuaSet();
         const files = fs.list(directory);
         for (const i of $range(0, files.length - 1))
             if (endsWith(files[i], ".json"))

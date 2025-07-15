@@ -179,9 +179,12 @@ export const displayPages = (lines: string[], height: number = term.getSize()[1]
  * @param pointer The location of the cursor.
  * @returns [{@link prevInput}, {@link heldKeys}, {@link pointer}, event, done ]
  */
-const readCharacter = (prompt: string, prevInput: string = "", heldKeys: { ctrl: boolean } = { ctrl: false }, pointer: number = 0) => {
+const readCharacter = (prompt: string, prevInput: string, heldKeys: { ctrl: boolean }, pointer: number) => {
+    prevInput = prevInput ?? "";
+    heldKeys = heldKeys ?? { ctrl: false };
+    pointer = pointer ?? 0;
     term.clearLine();
-    const y = term.getCursorPos()[1];
+    const [_, y] = term.getCursorPos();
     term.setCursorPos(1, y);
     write(`${prompt}${prevInput}`);
     term.setCursorPos(prompt.length + 1 + pointer, y);
