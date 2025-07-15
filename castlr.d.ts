@@ -8,17 +8,17 @@ declare class KeyboardPeripheral implements IPeripheral {
 type RecipeTypeIdentifier = string;
 type RecipeLocation = string;
 type RecipeType = {
-    typeID: RecipeTypeIdentifier,
-    input: RecipeLocation,
+    typeID: RecipeTypeIdentifier
+    input: RecipeLocation
     output: RecipeLocation
 }
 type Recipe = {
-    typeID: RecipeTypeIdentifier,
-    input: SlotDetail[],
+    typeID: RecipeTypeIdentifier
+    input: SlotDetail[]
     output: SlotDetail
 }
-type Settings = { 
-    period: number, 
-    inputChest: RecipeLocation, 
-    outputChest: RecipeLocation 
+type Settings = {
+    period: number
+    inputChest: RecipeLocation
+    outputChest: RecipeLocation
 }

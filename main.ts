@@ -1,15 +1,17 @@
-import { 
+import {
     writeFile,
     splitString,
-    input,
-    menu,
+    getInput,
+    displayMenu,
     correctableInput,
     namespaceValidator,
     intValidator,
-    paginator,
+    displayPages,
     stringCompletor,
-    searchLines,
-    orderStrings
+    displaySearch,
+    orderStrings,
+    ProgressBar,
+    getConsent
 } from "./utils";
 import { Data } from "./data";
 
@@ -22,12 +24,12 @@ const submenus = {
         for (const recipe of instance.getAllRecipes())
             craftableItems.push(recipe.output.name);
         const items = instance.getOrderedItemNames(craftableItems);
-        const [ name, count ] = correctableInput(
-            ["item to craft", "amount to craft"], 
+        const [name, count] = correctableInput(
+            ["item to craft", "amount to craft"],
             [namespaceValidator, intValidator(1, max)],
             [stringCompletor(items)]
         );
-        const [ itemsUsed, recipeStack ] = instance.gatherIngredients(name, tonumber(count));
+        const [itemsUsed, recipeStack] = instance.gatherIngredients(name, tonumber(count));
         const itemUseStrs = [];
         const missingStrs = [];
         const currentStoreStrs = [];
@@ -38,17 +40,17 @@ const submenus = {
                 currentStoreStrs.push(`${name} x ${storeCount}`);
                 if (storeCount < usedCount) missingStrs.push(strVal);
                 itemUseStrs.push(strVal);
-            } 
+            }
         }
         if (missingStrs.length > 0) {
-            print("Error: the following items must be inserted:")
-            paginator(missingStrs);
+            print("Error: the following items must be inserted:");
+            displayPages(missingStrs);
             return;
         }
-        if (string.upper(input("Display current store counts? (Y/N): ")) === "Y") paginator(currentStoreStrs);
-        print("The following items will be consumed:")
-        paginator(itemUseStrs);
-        if (string.upper(input("Is the above correct? (Y/N): ")) !== "Y") return;
+        if (string.upper(getInput("Display current store counts? (Y/N): ")) === "Y") displayPages(currentStoreStrs);
+        print("The following items will be consumed:");
+        displayPages(itemUseStrs);
+        if (!getConsent()) return;
         // reset for progress bar positioning
         term.clear();
         term.setCursorPos(1, 1);
@@ -71,7 +73,6 @@ const submenus = {
             }
             for (const _ of $range(1, repeatCount))
                 for (const inputItem of currentRecipe.input)
-                    if (!instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier))
                     if (instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier) < inputItem.count * countMultiplier)
                         print(`Error crafting ${currentRecipe.output.name}`);
 
@@ -100,14 +101,15 @@ const submenus = {
             /** @noSelf **/
             T() {
                 const invs = instance.getOrderedInventoryNames();
-                const [ typeID, inputChest, outputChest ] = correctableInput(  
+                const [typeID, inputChest, outputChest] = correctableInput(
                     [
-                        "namespaced recipe ID", 
+                        "namespaced recipe ID",
                         "input chest ID",
                         "output chest ID"
                     ],
-                    [ namespaceValidator ],
-                    [ , stringCompletor(invs), stringCompletor(invs) ]
+                    [namespaceValidator],
+                    // eslint-disable-next-line no-sparse-arrays
+                    [, stringCompletor(invs), stringCompletor(invs)]
                 );
                 const saveLocation = fs.combine("./types/", `${splitString(typeID, ":")[1]}.json`);
                 writeFile(saveLocation, textutils.serializeJSON({ typeID, input: inputChest, output: outputChest }));
@@ -116,18 +118,18 @@ const submenus = {
             /** @noSelf **/
             R() {
                 const recipes = instance.getOrderedRecipeNames();
-                const [ typeID, outputItemID, outputItemCount ] = correctableInput(
+                const [typeID, outputItemID, outputItemCount] = correctableInput(
                     [
-                        "namespaced recipe ID", 
+                        "namespaced recipe ID",
                         "output item ID",
                         "output item count"
                     ],
-                    [ namespaceValidator, namespaceValidator, intValidator(1, 64) ],
-                    [ stringCompletor(recipes), stringCompletor(items)]
+                    [namespaceValidator, namespaceValidator, intValidator(1, 64)],
+                    [stringCompletor(recipes), stringCompletor(items)]
                 );
                 let inputCount = -1;
                 while (!(0 < inputCount && inputCount < 10))
-                    inputCount = tonumber(input("Enter - recipe input count (1-9): ")) ?? -1;
+                    inputCount = tonumber(getInput("Enter - recipe input count (1-9): ")) ?? -1;
                 const inputStrings = [];
                 const validationFuncs = [];
                 const completionFuncs = [];
@@ -137,25 +139,24 @@ const submenus = {
 
                     validationFuncs.push(namespaceValidator);
                     validationFuncs.push(intValidator(1, 64));
-                    
+
                     completionFuncs[i * 2] = stringCompletor(items);
                 }
                 const inputItemsRaw = correctableInput(inputStrings, validationFuncs, completionFuncs);
                 const inputItems = [];
                 for (let i = 0; i < inputItemsRaw.length; i += 2)
                     inputItems.push({ name: inputItemsRaw[i], count: tonumber(inputItemsRaw[i + 1]) });
-                
                 const saveLocation = fs.combine("./recipes/", splitString(typeID, ":")[1], `${splitString(outputItemID, ":")[1]}.json`);
                 writeFile(saveLocation, textutils.serialiseJSON({ typeID, input: inputItems, output: { name: outputItemID, count: tonumber(outputItemCount) } }));
             }
-        } as { [index: string]: () => void}
-        const process = branches[menu(submenuText)];
+        } as { [index: string]: () => void };
+        const process = branches[displayMenu(submenuText)];
         if (process !== undefined) process();
         instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
         instance.getInventory(instance.settings.inputChest).syncData();
-        if (string.upper(input("Also store items from outputs? (Y/N): ")) === "Y") {
+        if (string.upper(getInput("Also store items from outputs? (Y/N): ")) === "Y") {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(instance.settings.inputChest);
             for (const recipeType of instance._recipeTypes)
@@ -169,17 +170,17 @@ const submenus = {
     },
     T(instance: Data) {
         const items = instance.getOrderedItemNames();
-        const [ name ] = correctableInput(
-            [ "item name" ], 
-            [ (name: string) => {
+        const [name] = correctableInput(
+            ["item name"],
+            [(name: string) => {
                 const max = instance.getTotalItemCount(name);
                 print(`${max} x ${name} stored.`);
                 return namespaceValidator(name);
-            } ],
-            [ stringCompletor(items) ]
+            }],
+            [stringCompletor(items)]
         );
         const max = instance.getTotalItemCount(name);
-        const [ amountToTake ] = correctableInput([ "amount to take" ], [ intValidator(0, max) ], [ undefined ]);
+        const [amountToTake] = correctableInput(["amount to take"], [intValidator(0, max)], [undefined]);
         const intToTake = tonumber(amountToTake);
         if (intToTake === 0) return;
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
@@ -189,14 +190,14 @@ const submenus = {
     L(instance: Data) {
         const map = instance.getAllItems();
         const strings = new LuaSet<string>();
-        for (const [ name, count ] of map)
+        for (const [name, count] of map)
             strings.add(`${name} x ${count}`);
-        searchLines(orderStrings(strings));
+        displaySearch(orderStrings(strings));
     },
     R(instance: Data) {
         instance.init();
     }
-} as {[index: string]: undefined | ((instance: Data) => void)}
+} as { [index: string]: undefined | ((this: void, instance: Data) => void) }
 function main() {
     term.clear();
     term.setCursorPos(1, 1);
@@ -213,11 +214,11 @@ function main() {
         "   L - list all stored items.",
         "   R - refresh stored data.",
         "Enter mode: "
-    ]
+    ];
     while (true) {
         term.clear();
         term.setCursorPos(1, 1);
-        const action = menu(menuStrings)
+        const action = displayMenu(menuStrings);
         const process = submenus[action];
         if (process !== undefined) {
             process(instance);

@@ -17,27 +17,35 @@ export const writeFile = (path: string, data: string) => {
  */
 export const readFile = (path: string) => {
     const [file, err] = fs.open(path, "r");
-    if (err !== undefined) return;
+    if (err !== undefined) return "";
     const data = file.readAll();
     file.close();
     return data;
-}
+};
 type InputOptions = {
-    replaceChar?: string,
-    history?: string[],
-    completeFn?: (this: void, partial: string) => string[],
+    replaceChar?: string
+    history?: string[]
+    completeFn?: (this: void, partial: string) => string[]
     presetInput?: string
 }
 /**
- * Function to prompt a user for an input, returning it.
+ * Function to prompt a user for an input, returning it without validation.
  * Has options for a replacement character, history, completion function, and preset input.
  * @param prompt The string to display to the user.
  * @param options {@link https://tweaked.cc/module/_G.html#v:read}
  * @returns The value entered by the user.
  */
-export const input = (prompt: string, options: InputOptions = {}) => {
+export const getInput = (prompt: string, options: InputOptions = {}) => {
     write(prompt);
     return read(options.replaceChar, options.history, options.completeFn, options.presetInput);
+}
+/**
+ * Check with the user that the above is correct.
+ * @returns If the user consented to proceeding.
+ */
+export const getConsent = () => {
+    const options = { completeFn: stringCompletor(["N", "Y"]) };
+    return string.lower(getInput("Is the above correct? (Y/N): ", options)) === "y";
 }
 /**
  * Splits a string on a given separator.
@@ -71,10 +79,10 @@ export const intValidator = (min: number, max: number) => (int: string) => {
 }
 /**
  * Function to determine if a string should be accepted as a namespaced string.
- * @param string The string to validate.
+ * @param value The string to validate.
  * @returns Whether the string is valid.
  */
-export const namespaceValidator = (string: string) => splitString(string, ":").length === 2;
+export const namespaceValidator = (value: string) => splitString(value, ":").length === 2;
 /**
  * Convert a Set of strings into a sorted array of strings
  * @param uniqueStrings A LuaSet of strings guarantees there are no duplicates.
@@ -123,45 +131,45 @@ export const correctableInput = (strings: string[], conditions: (((maybeValid: s
         let i = 0;
         while (i < strings.length) {
             // formatting
-            const newValue = input(`Enter - ${strings[i]}\: `, { presetInput: defaultValues[i], completeFn: completeFns[i] });
+            const newValue = getInput(`Enter - ${strings[i]}: `, { presetInput: defaultValues[i], completeFn: completeFns[i] });
             // accept input if valid or no condition
             if (conditions[i] === undefined || conditions[i](newValue)) {
                 defaultValues[i] = newValue;
                 i++;
             } // else retry
         }
-    } while (string.upper(input("Is the above correct? (Y/N): ")) !== "Y");
+    } while (!getConsent());
     return $multi(...defaultValues);
 }
 /**
- * Multi-line wrapper / version of {@link input}.
+ * Multi-line wrapper / version of {@link getInput}.
  * @param displayText The strings, and user prompt for input.
  * @returns The user's input.
  */
-export const menu = (displayText: string[]): string => {
+export const displayMenu = (displayText: string[]): string => {
     for (const i of $range(0, displayText.length - 2))
         print(displayText[i]);
-    return string.upper(input(displayText[displayText.length - 1]));
+    return string.upper(getInput(displayText[displayText.length - 1]));
 }
 /**
  * Allow a user to parse a large amount of text at their own pace.
  * @param lines The strings to page through.
  * @param height The maximum amount of strings to display at once.
  */
-export const paginator = (lines: string[], height: number = term.getSize()[1]) => {
+export const displayPages = (lines: string[], height: number = term.getSize()[1]) => {
     const pageSize = height - 2;
     const totalPages = Math.ceil(lines.length / pageSize);
     let currentPage = 1;
     while (currentPage <= totalPages) {
         for (const i of $range((currentPage - 1) * pageSize, currentPage * pageSize - 1))
             print(lines[i] ?? "");
-        const nextPageInt = tonumber(input(`Page ${currentPage} of ${totalPages} - Enter page number: `));
+        const nextPageInt = tonumber(getInput(`Page ${currentPage} of ${totalPages} - Enter page number: `));
         // NaN check / increment
         currentPage = nextPageInt ?? currentPage + 1;
     }
 }
 /**
- * This function should be repeatedly called with its return values. 
+ * This function should be repeatedly called with its return values.
  * It will set the fifth return value to true when the input is complete.
  * The most recently pulled event is returned for other use.
  * It is similar in use to the default settings of readline(3), providing basic editing and navigation to a user.
@@ -171,7 +179,7 @@ export const paginator = (lines: string[], height: number = term.getSize()[1]) =
  * @param pointer The location of the cursor.
  * @returns [{@link prevInput}, {@link heldKeys}, {@link pointer}, event, done ]
  */
-const readCharacter = (prompt: string, prevInput: string = "", heldKeys: { ctrl: boolean } = { ctrl : false }, pointer: number = 0) => {
+const readCharacter = (prompt: string, prevInput: string = "", heldKeys: { ctrl: boolean } = { ctrl: false }, pointer: number = 0) => {
     term.clearLine();
     const y = term.getCursorPos()[1];
     term.setCursorPos(1, y);
@@ -181,61 +189,64 @@ const readCharacter = (prompt: string, prevInput: string = "", heldKeys: { ctrl:
     // handle text input
     const ctrlCommands = {
         // move to start
-        a: () => pointer = 0,
+        a: () => { pointer = 0 },
         // move back 1 char
-        b: () => pointer--,
+        b: () => { pointer -= 1 },
         // delete current char
-        d: () => prevInput = string.sub(prevInput, 1, pointer - 1) + string.sub(prevInput, pointer + 1),
+        d: () => { prevInput = string.sub(prevInput, 1, pointer - 1) + string.sub(prevInput, pointer + 1) },
         // move to end
-        e: () => pointer = prevInput.length,
+        e: () => { pointer = prevInput.length },
         // move forward one char
-        f: () => pointer++,
+        f: () => { pointer += 1 },
         // delete previous char
         h: () => {
             prevInput = string.sub(prevInput, 1, pointer - 1) + string.sub(prevInput, pointer + 1);
-            pointer--;
+            pointer -= 1;
         },
         // clear string, pointer onwards
-        k: () => prevInput = string.sub(prevInput, 1, pointer),
+        k: () => { prevInput = string.sub(prevInput, 1, pointer) },
         // swap prev + current char
         t: () => {
             if (pointer === prevInput.length) pointer--;
             const start = string.sub(prevInput, 1, pointer - 1);
             const charSwapOne = string.sub(prevInput, pointer, pointer);
             const charSwapTwo = string.sub(prevInput, pointer + 1, pointer + 1);
-            const end = string.sub(prevInput, pointer + 2);
-            prevInput = start + charSwapTwo + charSwapOne + end;
-            pointer++;
+            const sEnd = string.sub(prevInput, pointer + 2);
+            prevInput = start + charSwapTwo + charSwapOne + sEnd;
+            pointer += 1;
         },
         // clear string to pointer
         u: () => {
             prevInput = string.sub(prevInput, pointer + 1);
             pointer = 0;
         }
-    } as { [index: string]: undefined | (() => void)}
+    } as { [index: string]: undefined | (() => void) }
+    const keyToCommand = {
+        [keys.home]: ctrlCommands.a,
+        [keys.left]: ctrlCommands.b,
+        [keys.delete]: ctrlCommands.d,
+        [keys.end]: ctrlCommands.e,
+        [keys.right]: ctrlCommands.f,
+        [keys.backslash]: ctrlCommands.h
+    }
     if (event[0] === "char") {
         prevInput = string.sub(prevInput, 1, pointer) + event[1] + string.sub(prevInput, pointer + 1);
-        pointer++;
+        pointer += 1;
     // handle enter, ctrl, movement, delete
     } else if (event[0] === "key") {
         const key = event[1];
-        if (key === keys.leftCtrl || key === keys.rightCtrl) heldKeys.ctrl = true;
-        if (key === keys.enter || key === keys.numPadEnter) return $multi(prevInput, heldKeys, pointer, event, false);
-        if (key === keys.home) ctrlCommands.a();
-        if (key === keys.left) ctrlCommands.b();
-        if (key === keys.delete) ctrlCommands.d();
-        if (key === keys.end) ctrlCommands.e();
-        if (key === keys.right) ctrlCommands.f();
-        if (key === keys.backspace) ctrlCommands.h();
-        if (heldKeys.ctrl) {
+        if (key === keys.leftCtrl || key === keys.rightCtrl) {
+            heldKeys.ctrl = true;
+        } else if (key === keys.enter || key === keys.numPadEnter) {
+            return $multi(prevInput, heldKeys, pointer, event, true);
+        } else if (heldKeys.ctrl) {
             const name = keys.getName(key);
-            const command = ctrlCommands[name]
-            if (command !== undefined) command();
-        }
+            pcall(ctrlCommands[name]);
+        } else if (keyToCommand[key] !== undefined) keyToCommand[key]();
     } else if (event[0] === "key_up") {
         if (event[1] === keys.leftCtrl || event[1] === keys.rightCtrl) heldKeys.ctrl = false;
     }
-    pointer = math.min(math.max(0, pointer), prevInput.length)
+    pointer = math.min(math.max(0, pointer), prevInput.length);
     return $multi(prevInput, heldKeys, pointer, event, false);
 }
 /**
@@ -246,13 +257,13 @@ const readCharacter = (prompt: string, prevInput: string = "", heldKeys: { ctrl:
  * @param func An optional callback function that will be called with the current input and event.
  * @returns The input the user gave.
  */
-export const readline = (prompt: string, func?: (partial: string, event?: LuaMultiReturn<[string, ...any[]]>) => void) => {
+export const readline = (prompt: string, func?: (partial: string, event?: LuaMultiReturn<[string, ...unknown[]]>) => void) => {
     const cursorState = term.getCursorBlink();
     term.setCursorBlink(true);
     let prevInput = "";
-    let heldKeys: {ctrl: boolean};
+    let heldKeys: { ctrl: boolean };
     let pointer: number;
-    let event: LuaMultiReturn<[string, ...any[]]>;
+    let event: LuaMultiReturn<[string, ...unknown[]]>;
     let done: boolean;
     do {
         [prevInput, heldKeys, pointer, event, done] = readCharacter(prompt, prevInput, heldKeys, pointer);
@@ -281,11 +292,11 @@ export const stringSearch = (searchSpace: string[], query: string): string[] => 
  * @param lines The strings to search through.
  * @param height The maximum amount of strings to display at once.
  */
-export const searchLines = (lines: string[], height: number = term.getSize()[1]) => {
+export const displaySearch = (lines: string[], height: number = term.getSize()[1]) => {
     // move existing text out of the way
     term.scroll(height - 2);
     let offset = 0;
-    const callback = (partial: string, event?: LuaMultiReturn<[string, ...any[]]>) => {
+    const callback = (partial: string, event?: LuaMultiReturn<[string, ...unknown[]]>) => {
         const matchingLines = stringSearch(lines, partial);
         while (matchingLines[offset] === undefined && offset !== 0) offset--;
         if (event !== undefined && event[0] === "key") {

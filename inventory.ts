@@ -1,7 +1,6 @@
 // map of index to count
 type SlotCounts = LuaMap<number, number>;
 
-
 /**
  * This class wraps an Inventory Peripheral, exposing a few extra methods.
  * All API calls that can be cached are performed during instantiation.
@@ -22,11 +21,11 @@ export class Inventory {
     /**
      * This is the maximum amount of an item that can be stored in a single slot in the wrapped inventory.
      * - This is extrapolated from the first slot, and so issues may occur in storing unstackable items.
-     * - It can be overridden during instantiation. 
+     * - It can be overridden during instantiation.
      */
     itemLimit: number;
     /**
-     * 
+     *
      * @param peripheralName The name passed to peripheral.wrap() to give an inventory peripheral.
      * @param type The type of storage that the {@link Inventory} can be filtered by.
      * @param itemLimit The maximum amount that an item can stack to in a single slot.
@@ -39,6 +38,7 @@ export class Inventory {
         this.itemLimit = itemLimit ?? this._peripheral.getItemLimit(1);
         this.syncData();
     }
+
     /**
      * This is the core data structure that makes the wrapper fast.
      * When searching for an item by name, the slots it is in, as well as the counts, are accessible in the map.
@@ -47,6 +47,7 @@ export class Inventory {
     getSlots(): LuaMap<string, SlotCounts> {
         return this._slots;
     }
+
     /**
      * @returns the amount stored of the given item
      */
@@ -59,17 +60,19 @@ export class Inventory {
             total += count;
         return total;
     }
+
     /**
      * Returns the name of the peripheral the instance wraps.
      */
     getName(): string {
         return this._name;
     }
+
     /**
      * This generator yields slot indexes for the inventory at which the specified item can be inserted.
      * If it is `done`, there are no more available slots for the item to be inserted at.
      */
-    *getNextAvailableSlot(name: string): Generator<number, void, undefined> {
+    * getNextAvailableSlot(name: string): Generator<number, void, undefined> {
         // check all slots of item - if none work, return empty slot
         const slotCounts = this._slots.get(name);
         if (slotCounts !== undefined)
@@ -83,12 +86,13 @@ export class Inventory {
         }
         return;
     }
+
     /**
      * This function exists to keep the cache in sync with the real inventory.
      * Desynchronisation can be caused by inserting an item into the underlying inventory, in which case this should be called.
      * It is automatically handled when using the wrapper to push to another {@link Inventory}.
      */
-    recieveItems(name: string, slot: number, count: number) {
+    receiveItems(name: string, slot: number, count: number) {
         // update this.slots
         let currentSlots = this._slots.get(name);
         if (currentSlots === undefined) {
@@ -96,17 +100,18 @@ export class Inventory {
             this._slots.set(name, currentSlots);
         }
         const newAmount = (currentSlots.get(slot) ?? 0) + count;
-        // if (currentAmount + count > this.getItemLimit(slot)) DEBUG && print("issue - recieveItems called with excessive value");
+        // if (currentAmount + count > this.getItemLimit(slot)) DEBUG && print("issue - receiveItems called with excessive value");
         currentSlots.set(slot, newAmount);
         // update this._list
         if (this._list[slot] === undefined) {
             const slotDetail: SlotDetail = { name, count };
             this._list[slot] = slotDetail;
         } else {
-            // if (this._list[slot].name !== name) DEBUG && print("issue - recieveItems called with wrong name");
+            // if (this._list[slot].name !== name) DEBUG && print("issue - receiveItems called with wrong name");
             this._list[slot].count = newAmount;
         }
     }
+
     /**
      * This is to be called when the inventory accesses cannot be synchronised, such as a player inserting or removing items.
      * As it calls the underlying inventory peripheral API, it is not particularly fast - use it sparingly.
@@ -125,36 +130,42 @@ export class Inventory {
             currentSlots.set(slot, item.count);
         }
     }
+
     /**
      * @see {@link https://tweaked.cc/generic_peripheral/inventory.html#v:size|tweaked.cc#size}
      */
     size() {
         return this._size;
     }
+
     /**
      * @see {@link https://tweaked.cc/generic_peripheral/inventory.html#v:list|tweaked.cc#list}
      */
     list() {
         return this._list;
     }
+
     /**
      * Returns basic details about the item in the given slot - its name, count, and hashed NBT.
      */
     getSlot(slot: number) {
         return this._list[slot];
     }
+
     /**
      * @see {@link https://tweaked.cc/generic_peripheral/inventory.html#v:getItemDetail|tweaked.cc#getItemDetail}
      */
     getItemDetail(slot: number) {
         return this._peripheral.getItemDetail(slot);
     }
+
     /**
      * @see {@link https://tweaked.cc/generic_peripheral/inventory.html#v:getItemLimit|tweaked.cc#getItemLimit}
      */
     getItemLimit(slot: number) {
         return this._peripheral.getItemLimit(slot);
     }
+
     /**
      * This function will push items from the wrapped Inventory to the destination Inventory.
      * It follows the default CC API, without the ability to specify a destination slot;
@@ -184,10 +195,11 @@ export class Inventory {
             this._slots.get(itemToMove.name).set(fromSlot, newSlotCount);
             itemToMove.count = newSlotCount;
             // sync stored data in dest
-            to.recieveItems(itemToMove.name, toSlot, amountMoved);
+            to.receiveItems(itemToMove.name, toSlot, amountMoved);
         }
         return totalMoved;
     }
+
     /**
      * Calls pushItems on `from`, with the to value as `this`.
      * @see {@link pushItems}
