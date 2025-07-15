@@ -198,7 +198,15 @@ const submenus = {
         instance.init();
     }
 } as { [index: string]: undefined | ((this: void, instance: Data) => void) }
+
+function install() {
+    fs.makeDir("./types/");
+    fs.makeDir("./recipes/");
+    writeFile("./settings.json", "{}");
+}
+
 function main() {
+    if (fs.exists("./settings.json")) install();
     term.clear();
     term.setCursorPos(1, 1);
     for (const keyboard of peripheral.find("tm_keyboard"))
