@@ -229,11 +229,11 @@ export class Data {
         return orderStrings(uniqueNames);
     }
 
-    getOrderedRecipeNames(): string[] {
     /**
      * Iterates through all stored recipe types to collate all type IDs.
      * @returns An ordered list of recipe type IDs.
      */
+    getOrderedRecipeTypeIDs(): string[] {
         const uniqueNames = new LuaSet<string>();
         for (const recipe of this._recipeTypes)
             uniqueNames.add(recipe.typeID);
@@ -266,7 +266,6 @@ export class Data {
             if (recipeType.typeID === typeID) return recipeType;
     }
 
-    getRecipe(output: string) {
     /**
      * Look up a recipe using its output item name.
      * @param itemOutput The name of the output item for the desired {@link Recipe}.
@@ -275,7 +274,7 @@ export class Data {
     getRecipe(itemOutput: string) {
         // output name unique, return either matching recipe or undefined.
         for (const recipe of this._recipes)
-            if (recipe.output.name === output) return recipe;
+            if (recipe.output.name === itemOutput) return recipe;
     }
 
     /**
@@ -312,8 +311,8 @@ export class Data {
         for (const destStr of to) {
             const destInv = this._inventories.get(destStr);
             for (const [fromSlot] of srcSlots) {
-                amountMoved += srcInv.pushItems(destInv, fromSlot, limit);
-                if (amountMoved === limit) return true;
+                limit -= srcInv.pushItems(destInv, fromSlot, limit);
+                if (limit === 0) return true;
             }
         }
         return false;
@@ -364,7 +363,6 @@ export class Data {
         }
     }
 
-    gatherIngredients(name: string, count: number) {
     /**
      * This function will find the necessary ingredients in storage.
      * It prioritises least amount of intermediate crafts, using any items in storage first.
@@ -374,6 +372,7 @@ export class Data {
      * @returns A map of item names to their counts.
      * @returns An array, to be traversed as a stack upon which the crafting recipes to be performed are stored.
      */
+    gatherIngredients(name: string, count: number): [LuaMap<string, number>, (Recipe & { count: number })[]] {
         const itemsToGather: SlotDetail[] = [];
         const itemsGathered: LuaMap<string, number> = new LuaMap();
         const recipeStack: (Recipe & { count: number })[] = [];
@@ -411,7 +410,7 @@ export class Data {
             currentData.totalRecipeCount += recipe.count;
             duplicateRecipes.set(recipe.output.name, currentData);
         }
-        const newRecipeStack = [];
+        const newRecipeStack: (Recipe & { count: number })[] = [];
         for (const i of $range(0, recipeStack.length - 1)) {
             const recipe = recipeStack[i];
             const data = duplicateRecipes.get(recipe.output.name);
@@ -420,24 +419,24 @@ export class Data {
                 newRecipeStack.push(recipe);
             }
         }
-        return $multi(itemsGathered, newRecipeStack);
+        return [itemsGathered, newRecipeStack];
     }
 
-    log(prefix: string) {
-        return (val: string) => {
-            this._log.push(`${prefix}: ${val}`);
     /**
      * Create a new prefixed logger function.
      * @param prefix The prefix to use for this logger.
      * @returns A logger function.
      */
+    log(prefix: string): (log: string) => void {
+        return (log: string): void => {
+            this._log.push(`${prefix}: ${log}`);
         }
     }
 
-    showLog() {
     /**
      * Displays all logs in pages to the user.
      */
+    showLog(): void {
         if (!DEBUG) return;
         displayPages(this._log);
         this._log = [];
