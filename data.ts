@@ -10,17 +10,49 @@ import { Inventory } from "./inventory";
 
 const DEBUG = false;
 /**
- * This is the data controller for 
+ * This is the data controller for CASTLR. 
+ * It controls: Recipes and their types; settings; storages.
  */
 export class Data {
-    // map of (peripheral name ) to (Inventory)
+    /**
+     * 
+     * A map of peripheral names as used in {@link peripheral.wrap}, to instances of {@link Inventory}
+     */
     _inventories: LuaMap<string, Inventory>;
+
+    /**
+     * A set of all loaded recipe types.
+     * This is a LuaSet, rather than an array, as the generated lua code is more readable.
+     */
     _recipeTypes: LuaSet<RecipeType>;
+
+    /**
+     * A set of all loaded recipes.
+     * This is a LuaSet, rather than an array, as the generated lua code is more readable.
+     */
     _recipes: LuaSet<Recipe>;
+
+    /**
+     * The settings for the program.
+     * A user defined, constant value for a given run of the software that is accessible across
+     * the entirety of the software is a good candidate for addition to settings.
+     */
     settings: Settings;
+
+    /**
+     * Stores inventory peripheral names by their {@link StorageType}.
+     * This allows for access by type, using {@link getStoragesByType}.
+     */
     _storagesByType: { [index in StorageType]: LuaSet<string> };
+
+    /**
+     * A temporary store of logs until they are written out to the user.
+     */
     _log: string[] = [];
 
+    /**
+     * Creates a Data instance - Fields are not populated, and {@link init} should be called before using the instance.
+     */
     constructor() {
         this._inventories = new LuaMap();
         this._storagesByType = {
@@ -31,6 +63,13 @@ export class Data {
         };
     }
 
+    /**
+     * Initalise fields. In particular, this:
+     * - Sets setting values, taking from settings.json, or the specified default value.
+     * - Gathers recipes and their types read from ./recipes/ and ./types/, respectively.
+     * - Filters storages by type, using data from recipe types.
+     * - Wraps all connected inventory peripherals using {@link Inventory}.
+     */
     init() {
         print("Initalising..");
         // load settings
@@ -74,6 +113,13 @@ export class Data {
         parallel.waitForAll(...newInvFuncs);
     }
 
+    /**
+     * This first validates a recipe. It must:
+     * - Be of a valid recipe type.
+     * - Not produce an item with an existing recipe.
+     * It then stores the recipe in the instance.
+     * @param recipe An unvalidated recipe to insert.
+     */
     _addRecipe(recipe: Recipe) {
         let hasExistingType = false;
         for (const existingType of this._recipeTypes)
@@ -93,6 +139,12 @@ export class Data {
         this._recipes.add(recipe);
     }
 
+    /**
+     * This first validates a recipe type. It must:
+     * - Be a unique type.
+     * It then stores the recipe type in the instance, and loads all linked recipes the the corresponding ./recipes/${type} directory.
+     * @param recipe An unvalidated recipe to insert.
+     */
     _addRecipeType(recipeType: RecipeType) {
         for (const existingType of this._recipeTypes)
             if (existingType.typeID === recipeType.typeID) {
@@ -103,6 +155,11 @@ export class Data {
         this._loadRecipesFromDirectory(fs.combine('./recipes/', splitString(recipeType.typeID, ":")[1]));
     }
 
+    /**
+     * This will load, non-recursively, all of the recipe JSONs in the given directory.
+     * It calls {@link _addRecipe} for each one.
+     * @param directory The directory to load recipes from.
+     */
     _loadRecipesFromDirectory(directory: string) {
         const files = fs.list(directory);
         for (const i of $range(0, files.length - 1))
@@ -110,6 +167,10 @@ export class Data {
                 this._addRecipe(textutils.unserialiseJSON(readFile(fs.combine(directory, files[i]))) as Recipe);
     }
 
+    /**
+     * The will load recipe types from the given directory, calling {@link _addRecipeType} for each.
+     * @param directory The directory to load recipe types from.
+     */
     loadRecipeTypesFromDirectory(directory: string) {
         this._recipeTypes = new LuaSet();
         this._recipes = new LuaSet();
@@ -119,6 +180,11 @@ export class Data {
                 this._addRecipeType(textutils.unserialiseJSON(readFile(fs.combine(directory as string, files[i]))) as RecipeType);
     }
 
+    /**
+     * Gets the total amount of an item stored across all connected inventories by iterating through them.
+     * @param name The name of the item to get the count of.
+     * @returns The amount of that item that are stored.
+     */
     getTotalItemCount(name: string) {
         let total = 0;
         for (const [,inventory] of this._inventories)
@@ -126,6 +192,10 @@ export class Data {
         return total;
     }
 
+    /**
+     * Iterates through each connected inventory, building a map of item name to total counts.
+     * @returns A map of item names to their total counts.
+     */
     getAllItems(): LuaMap<string, number> {
         const itemMap = new LuaMap<string, number>();
         for (const [, inv] of this._inventories)
@@ -136,6 +206,11 @@ export class Data {
         return itemMap;
     }
 
+    /**
+     * Iterates through all connected inventories to collate all unique item names. Additional names can be inserted.
+     * @param insertedValues Values to insert into the ordered item names, for autocompletion of craftable items.
+     * @returns An ordered list of item names.
+     */
     getOrderedItemNames(insertedValues?: string[]): string[] {
         const uniqueNames = new LuaSet<string>();
         if (insertedValues !== undefined) for (const value of insertedValues) uniqueNames.add(value);
@@ -145,6 +220,10 @@ export class Data {
         return orderStrings(uniqueNames);
     }
 
+    /**
+     * Iterates through all connected inventories to collate all unique peripheral names.
+     * @returns An ordered list of inventory peripheral names.
+     */
     getOrderedInventoryNames(): string[] {
         const uniqueNames = new LuaSet<string>();
         for (const [name] of this._inventories)
@@ -153,20 +232,36 @@ export class Data {
     }
 
     getOrderedRecipeNames(): string[] {
+    /**
+     * Iterates through all stored recipe types to collate all type IDs.
+     * @returns An ordered list of recipe type IDs.
+     */
         const uniqueNames = new LuaSet<string>();
         for (const recipe of this._recipeTypes)
             uniqueNames.add(recipe.typeID);
         return orderStrings(uniqueNames);
     }
 
+    /**
+     * Allows access to inventory peripherals by their designated type: Input, Storage, Output.
+     * They can also be filted by NotInput, a union type of Storage and Output.
+     * @param sType The storage type to filter by.
+     * @returns A list of storages, all of the type filtered.
+     */
     getStoragesByType(sType: StorageType) {
         if (sType !== StorageType.NotInput)
             return this._storagesByType[sType];
+        // for NotInput storage type, combine Storage and Output
         const storages = this._storagesByType[StorageType.Storage];
         for (const storage in this._storagesByType[StorageType.Output]) storages.add(storage);
         return storages;
     }
 
+    /**
+     * Look up a recipe type using its type ID.
+     * @param typeID The typeID for the desired {@link RecipeType}.
+     * @returns The {@link RecipeType} with the desired typeID.
+     */
     getRecipeType(typeID: RecipeTypeIdentifier) {
         // typeID unique, return either matching recipe or undefined.
         for (const recipeType of this._recipeTypes)
@@ -174,20 +269,43 @@ export class Data {
     }
 
     getRecipe(output: string) {
+    /**
+     * Look up a recipe using its output item name.
+     * @param itemOutput The name of the output item for the desired {@link Recipe}.
+     * @returns The {@link Recipe} with the desired output item.
+     */
+    getRecipe(itemOutput: string) {
         // output name unique, return either matching recipe or undefined.
         for (const recipe of this._recipes)
             if (recipe.output.name === output) return recipe;
     }
 
+    /**
+     * Accessor method: get all stored {@link Recipe}s
+     * @returns All stored {@link Recipe}s as a LuaSet.
+     */
     getAllRecipes() {
         return this._recipes;
     }
 
+    /**
+     * Access a single inventory peripheral by name, without wrapping it again.
+     * @param name The name of the inventory peripheral to wrap.
+     * @returns The underlying peripheral.
+     */
     getInventory(name: string) {
         return this._inventories.get(name);
     }
 
-    // output -> storage, specific item
+    /**
+     * This function will move items from a single source to many destinations.
+     * It will only move a single item, up to the given limit.
+     * @param from The name of the source inventory peripheral.
+     * @param to The name of the destination inventory peripherals.
+     * @param name The name of the item to move.
+     * @param limit The maximum amount of the item to move.
+     * @returns Whether the limit was reached successfully.
+     */
     moveItemFromOne(from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean {
         const srcInv = this._inventories.get(from);
         const srcSlots = srcInv.getSlots().get(name);
@@ -203,7 +321,15 @@ export class Data {
         return false;
     }
 
-    // storage -> input
+    /**
+     * This function will move items from many sources to a single desination.
+     * It will only move a single item, up to the given limit.
+     * @param from The list of source inventory peripherals.
+     * @param to The destination inventory peripheral.
+     * @param name The name of the item to move.
+     * @param limit The maximum amount of the item to move.
+     * @returns The amount of items moved.
+     */
     moveItemFromMany(from: LuaSet<string>, to: string, name: string, limit: number): number {
         const destInv = this._inventories.get(to);
         const startingLimit = limit;
@@ -223,7 +349,12 @@ export class Data {
         return startingLimit - limit;
     }
 
-    // output -> storage
+    /**
+     * This function will move items from a single source to many desintations.
+     * It will move every item from the source that can be moved into the destinations given.
+     * @param from The source inventory to empty.
+     * @param to A list of the destination inventories.
+     */
     moveOneToMany(from: string, to: LuaSet<string>) {
         const srcInv = this.getInventory(from);
         for (const destStr of to) {
@@ -236,6 +367,15 @@ export class Data {
     }
 
     gatherIngredients(name: string, count: number) {
+    /**
+     * This function will find the necessary ingredients in storage.
+     * It prioritises least amount of intermediate crafts, using any items in storage first.
+     * If an item is not in storage, or cannot be crafted, it must be inserted.
+     * @param name The item name to craft.
+     * @param count The amount of the item to craft.
+     * @returns A map of item names to their counts.
+     * @returns An array, to be traversed as a stack upon which the crafting recipes to be performed are stored.
+     */
         const itemsToGather: SlotDetail[] = [];
         const itemsGathered: LuaMap<string, number> = new LuaMap();
         const recipeStack: (Recipe & { count: number })[] = [];
@@ -288,10 +428,18 @@ export class Data {
     log(prefix: string) {
         return (val: string) => {
             this._log.push(`${prefix}: ${val}`);
+    /**
+     * Create a new prefixed logger function.
+     * @param prefix The prefix to use for this logger.
+     * @returns A logger function.
+     */
         }
     }
 
     showLog() {
+    /**
+     * Displays all logs in pages to the user.
+     */
         if (!DEBUG) return;
         displayPages(this._log);
         this._log = [];
