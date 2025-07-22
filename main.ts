@@ -117,7 +117,7 @@ const submenus = {
             },
             /** @noSelf **/
             R() {
-                const recipes = instance.getOrderedRecipeNames();
+                const recipeTypeStrs = instance.getOrderedRecipeTypeIDs();
                 const [typeID, outputItemID, outputItemCount] = correctableInput(
                     [
                         "namespaced recipe ID",
@@ -125,7 +125,7 @@ const submenus = {
                         "output item count"
                     ],
                     [namespaceValidator, namespaceValidator, intValidator(1, 64)],
-                    [stringCompletor(recipes), stringCompletor(items)]
+                    [stringCompletor(recipeTypeStrs), stringCompletor(items)]
                 );
                 let inputCount = -1;
                 while (!(0 < inputCount && inputCount < 10))
