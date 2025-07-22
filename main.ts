@@ -47,10 +47,10 @@ const submenus = {
             displayPages(missingStrs);
             return;
         }
-        if (string.upper(getInput("Display current store counts? (Y/N): ")) === "Y") displayPages(currentStoreStrs);
+        if (getConsent("Display current store counts?")) displayPages(currentStoreStrs);
         print("The following items will be consumed:");
         displayPages(itemUseStrs);
-        if (!getConsent()) return;
+        if (!getConsent("Is the above correct?")) return;
         // reset for progress bar positioning
         term.clear();
         term.setCursorPos(1, 1);
@@ -156,7 +156,7 @@ const submenus = {
     },
     S(instance: Data) {
         instance.getInventory(instance.settings.inputChest).syncData();
-        if (string.upper(getInput("Also store items from outputs? (Y/N): ")) === "Y") {
+        if (getConsent("Also store items from outputs?")) {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(instance.settings.inputChest);
             for (const recipeType of instance._recipeTypes)

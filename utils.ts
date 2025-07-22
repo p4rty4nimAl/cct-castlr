@@ -41,11 +41,12 @@ export const getInput = (prompt: string, options: InputOptions = {}) => {
 }
 /**
  * Check with the user that the above is correct.
+ * @param prompt The string representing what the user is consenting to.
  * @returns If the user consented to proceeding.
  */
-export const getConsent = () => {
+export const getConsent = (prompt: string) => {
     const options = { completeFn: stringCompletor(["N", "Y"]) };
-    return string.lower(getInput("Is the above correct? (Y/N): ", options)) === "y";
+    return string.lower(getInput(`${prompt} (Y/N): `, options)) === "y";
 }
 /**
  * Splits a string on a given separator.
@@ -138,7 +139,7 @@ export const correctableInput = (strings: string[], conditions: (((maybeValid: s
                 i++;
             } // else retry
         }
-    } while (!getConsent());
+    } while (!getConsent("Is the above correct?"));
     return $multi(...defaultValues);
 }
 /**
