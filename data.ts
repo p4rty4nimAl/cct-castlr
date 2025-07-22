@@ -54,7 +54,6 @@ export class Data {
      * Creates a Data instance - Fields are not populated, and {@link init} should be called before using the instance.
      */
     constructor() {
-        this._inventories = new LuaMap();
         this._storagesByType = {
             [StorageType.Input]: new LuaSet(),
             [StorageType.Output]: new LuaSet(),
@@ -71,7 +70,6 @@ export class Data {
      * - Wraps all connected inventory peripherals using {@link Inventory}.
      */
     init() {
-        print("Initalising..");
         // load settings
         this.settings = textutils.unserialiseJSON(readFile("./settings.json"));
         this.settings.period = this.settings.period ?? 1;

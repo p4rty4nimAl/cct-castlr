@@ -211,8 +211,6 @@ function main() {
     term.setCursorPos(1, 1);
     for (const keyboard of peripheral.find("tm_keyboard"))
         (keyboard as KeyboardPeripheral).setFireNativeEvents(true);
-    const instance = new Data();
-    instance.init();
     const menuStrings = [
         "Welcome to CASTLR!", // Computer Aided Storage, Technical Logistic Regulator
         "   C - craft an item.",
@@ -223,6 +221,9 @@ function main() {
         "   R - refresh stored data.",
         "Enter mode: "
     ];
+    print("Initalising..");
+    const instance = new Data();
+    instance.init();
     while (true) {
         term.clear();
         term.setCursorPos(1, 1);
