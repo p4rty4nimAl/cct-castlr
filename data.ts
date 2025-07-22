@@ -307,7 +307,6 @@ export class Data {
         const srcInv = this._inventories.get(from);
         const srcSlots = srcInv.getSlots().get(name);
         if (srcSlots === undefined) return false;
-        let amountMoved = 0;
         for (const destStr of to) {
             const destInv = this._inventories.get(destStr);
             for (const [fromSlot] of srcSlots) {
@@ -335,7 +334,6 @@ export class Data {
             const srcInv = this._inventories.get(srcInvStr);
             const slotCounts = srcInv.getSlots().get(name);
             if (slotCounts !== undefined)
-                // log(`slotCounts defined`)
                 // for every slot in inventory, given it is defined
                 for (const [fromSlot] of slotCounts) {
                     // move items to destination, up to limit - new limit = old limit - amount moved
