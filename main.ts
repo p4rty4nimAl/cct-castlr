@@ -108,7 +108,6 @@ const submenus = {
                         "output chest ID"
                     ],
                     [namespaceValidator],
-                    // eslint-disable-next-line no-sparse-arrays
                     [, stringCompletor(invs), stringCompletor(invs)]
                 );
                 const saveLocation = fs.combine("./types/", `${splitString(typeID, ":")[1]}.json`);
@@ -207,6 +206,7 @@ function install() {
 
 function main() {
     if (fs.exists("./settings.json")) install();
+    // reset terminal in case of a non-blank display
     term.clear();
     term.setCursorPos(1, 1);
     for (const keyboard of peripheral.find("tm_keyboard"))

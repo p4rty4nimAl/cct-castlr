@@ -62,7 +62,7 @@ export class Inventory {
     }
 
     /**
-     * Returns the name of the peripheral the instance wraps.
+     * Returns the name of the peripheral that the instance wraps.
      */
     getName(): string {
         return this._name;

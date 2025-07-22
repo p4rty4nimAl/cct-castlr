@@ -12,6 +12,7 @@ const DEBUG = false;
 /**
  * This is the data controller for CASTLR. 
  * It controls: Recipes and their types; settings; storages.
+ * TODO: split into separate controllers: recipes/types; settings; storages 
  */
 export class Data {
     /**
