@@ -27,12 +27,12 @@ export class Inventory {
     /**
      *
      * @param peripheralName The name passed to peripheral.wrap() to give an inventory peripheral.
-     * @param type The type of storage that the {@link Inventory} can be filtered by.
+     * @param sType The type of storage that the {@link Inventory} can be filtered by.
      * @param itemLimit The maximum amount that an item can stack to in a single slot.
      */
-    constructor(peripheralName: string, type: StorageType, itemLimit?: number) {
+    constructor(peripheralName: string, sType: StorageType, itemLimit?: number) {
         this._peripheral = peripheral.wrap(peripheralName) as InventoryPeripheral;
-        this.type = type;
+        this.type = sType;
         this._name = peripheralName;
         this._size = this._peripheral.size();
         this.itemLimit = itemLimit ?? this._peripheral.getItemLimit(1);

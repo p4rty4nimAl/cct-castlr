@@ -126,7 +126,8 @@ export const stringCompletor = (orderedStrs: string[]) => {
  * @param completeFns An optional function to grant the user autocompletion of inputs.
  * @returns An array of strings matching the user prompts given.
  */
-export const correctableInput = (strings: string[], conditions: (((maybeValid: string) => boolean) | undefined)[] = [], completeFns: (((this: void, partial: string) => string[]) | undefined)[]): LuaMultiReturn<string[]> => {
+export const correctableInput = (strings: string[], conditions: (((maybeValid: string) => boolean) | undefined)[], completeFns: (((this: void, partial: string) => string[]) | undefined)[]): LuaMultiReturn<string[]> => {
+    conditions = conditions ?? [];
     const defaultValues: string[] = [];
     do {
         let i = 0;
@@ -262,6 +263,7 @@ const readCharacter = (prompt: string, prevInput: string, heldKeys: { ctrl: bool
  * @returns The input the user gave.
  */
 export const readline = (prompt: string, func?: (partial: string, event?: LuaMultiReturn<[string, ...unknown[]]>) => void) => {
+    func = func ?? (() => {});
     const cursorState = term.getCursorBlink();
     term.setCursorBlink(true);
     let prevInput = "";
@@ -271,7 +273,7 @@ export const readline = (prompt: string, func?: (partial: string, event?: LuaMul
     let done: boolean;
     do {
         [prevInput, heldKeys, pointer, event, done] = readCharacter(prompt, prevInput, heldKeys, pointer);
-        if (func !== undefined) func(prevInput, event);
+        func(prevInput, event);
     } while (!done);
     term.setCursorBlink(cursorState);
     write("\n");

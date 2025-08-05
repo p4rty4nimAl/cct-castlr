@@ -6,7 +6,8 @@
         "moduleResolution": "node",
         "strict": false,
         "types": ["@jackmacwindows/lua-types/cc-5.2", "@jackmacwindows/craftos-types", "@jackmacwindows/cc-types", "./castlr.d.ts"],
-        "noImplicitAny": true
+        "noImplicitAny": true,
+        "removeComments": true,
     },
     "tstl": {
         "luaTarget": "CC-5.2",
