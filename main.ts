@@ -14,6 +14,7 @@ import {
     getConsent
 } from "./utils";
 import { Data } from "./data";
+import { expressionCompletor, expressionEvaluator, expressionValidator } from "./expressions";
 
 const submenus = {
     C(instance: Data) {
@@ -26,8 +27,8 @@ const submenus = {
         const items = instance.getOrderedItemNames(craftableItems);
         const [name, count] = correctableInput(
             ["item to craft", "amount to craft"],
-            [namespaceValidator, intValidator(1, max)],
-            [stringCompletor(items)]
+            [namespaceValidator, expressionValidator(1, max)],
+            [stringCompletor(items), expressionCompletor]
         );
         const [itemsUsed, recipeStack] = instance.gatherIngredients(name, tonumber(count));
         const itemUseStrs = [];
@@ -179,8 +180,8 @@ const submenus = {
             [stringCompletor(items)]
         );
         const max = instance.getTotalItemCount(name);
-        const [amountToTake] = correctableInput(["amount to take"], [intValidator(0, max)], [undefined]);
-        const intToTake = tonumber(amountToTake);
+        const [expression] = correctableInput(["amount to take"], [expressionValidator(0, max)], [expressionCompletor]);
+        const intToTake = expressionEvaluator(expression);
         if (intToTake === 0) return;
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
         instance.getInventory(instance.settings.outputChest).syncData();
