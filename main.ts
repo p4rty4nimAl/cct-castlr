@@ -206,7 +206,7 @@ function install() {
 }
 
 function main() {
-    if (fs.exists("./settings.json")) install();
+    if (!fs.exists("./settings.json")) install();
     // reset terminal in case of a non-blank display
     term.clear();
     term.setCursorPos(1, 1);
