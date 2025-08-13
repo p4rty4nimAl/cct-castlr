@@ -62,7 +62,7 @@ const submenus = {
                 print(`Recipe to craft ${currentRecipe.output.name} not found!`);
                 return;
             }
-            const currentOutputChest = instance.getInventory(recipeType.output);
+            const outputChest = instance.getInventory(recipeType.output);
             // submit items to crafter
             // repeat (recipe mult) times, round robin to allow for recipes with specific order
             // prevents overload of too many of the same item preventing the recipe being completed
@@ -72,18 +72,21 @@ const submenus = {
                 repeatCount = currentRecipe.count;
                 countMultiplier = 1;
             }
-            for (const _ of $range(1, repeatCount))
-                for (const inputItem of currentRecipe.input)
-                    if (instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier) < inputItem.count * countMultiplier)
-                        print(`Error crafting ${currentRecipe.output.name}`);
-
             const targetItem = { name: currentRecipe.output.name, count: currentRecipe.output.count * currentRecipe.count };
-            let currentCount;
             write(`Crafting: ${targetItem.name} x ${targetItem.count} `);
             const bar = new ProgressBar();
+            for (const _ of $range(1, repeatCount))
+                for (const inputItem of currentRecipe.input)
+                    if (instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier) < inputItem.count * countMultiplier) {
+                        print(`Error crafting ${currentRecipe.output.name}`);
+                        sleep(settings.get("castlr.period"));
+                        return;
+                    }
+
+            let currentCount;
             do {
-                currentOutputChest.syncData();
-                currentCount = currentOutputChest.getItemCount(targetItem.name);
+                outputChest.syncData();
+                currentCount = outputChest.getItemCount(targetItem.name);
                 bar.setProgress(currentCount / targetItem.count);
             } while (currentCount < targetItem.count);
         }
