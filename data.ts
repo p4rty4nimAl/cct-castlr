@@ -272,10 +272,14 @@ export class Data {
 
     /**
      * Access a single inventory peripheral by name, without wrapping it again.
+     * If the inventory is not already wrapped, the instance will re-initalise to prevent issues when the chunks the system resides in are reloaded.
      * @param name The name of the inventory peripheral to wrap.
      * @returns The underlying peripheral.
      */
     getInventory(name: string) {
+        const maybeInventory = this._inventories.get(name);
+        if (maybeInventory !== undefined) return maybeInventory;
+        this.init();
         return this._inventories.get(name);
     }
 
