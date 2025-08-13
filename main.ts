@@ -30,7 +30,7 @@ const submenus = {
             [namespaceValidator, expressionValidator(1, max)],
             [stringCompletor(items), expressionCompletor]
         );
-        const [itemsUsed, recipeStack] = instance.gatherIngredients(name, tonumber(count));
+        const [itemsUsed, recipeStack] = instance.gatherIngredients(name, expressionEvaluator(count));
         const itemUseStrs = [];
         const missingStrs = [];
         const currentStoreStrs = [];
