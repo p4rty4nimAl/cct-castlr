@@ -34,13 +34,6 @@ export class Data {
     _recipes: LuaSet<Recipe>;
 
     /**
-     * The settings for the program.
-     * A user defined, constant value for a given run of the software that is accessible across
-     * the entirety of the software is a good candidate for addition to settings.
-     */
-    settings: Settings;
-
-    /**
      * Stores inventory peripheral names by their {@link StorageType}.
      * This allows for access by type, using {@link getStoragesByType}.
      */
@@ -65,19 +58,11 @@ export class Data {
 
     /**
      * Initalise fields. In particular, this:
-     * - Sets setting values, taking from settings.json, or the specified default value.
      * - Gathers recipes and their types read from ./recipes/ and ./types/, respectively.
      * - Filters storages by type, using data from recipe types.
      * - Wraps all connected inventory peripherals using {@link Inventory}.
      */
     init() {
-        // load settings
-        this.settings = textutils.unserialiseJSON(readFile("./settings.json"));
-        this.settings.period = this.settings.period ?? 1;
-        this.settings.inputChest = this.settings.inputChest ?? "left";
-        this.settings.outputChest = this.settings.outputChest ?? "right";
-        writeFile("./settings.json", textutils.serialiseJSON(this.settings));
-
         // load recipes / types, get storage types
         this.loadRecipeTypesFromDirectory("./types/");
         // save in _storagesByType
@@ -85,9 +70,9 @@ export class Data {
         const outputs = this._storagesByType[StorageType.Output];
         const storages = this._storagesByType[StorageType.Storage];
         // treat outputChest like an input - do not store items, do not index
-        inputs.add(this.settings.outputChest);
+        inputs.add(settings.get("castlr.outputChest"));
         // treat inputChest like an output - do not store items, do index
-        outputs.add(this.settings.inputChest);
+        outputs.add(settings.get("castlr.inputChest"));
         for (const recipe of this._recipeTypes) {
             inputs.add(recipe.input);
             outputs.add(recipe.output);

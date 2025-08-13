@@ -18,7 +18,7 @@ import { expressionCompletor, expressionEvaluator, expressionValidator } from ".
 
 const submenus = {
     C(instance: Data) {
-        const outputChest = instance.getInventory(instance.settings.outputChest);
+        const outputChest = instance.getInventory(settings.get("castlr.outputChest"));
         outputChest.syncData();
         const max = outputChest.getItemLimit(1) * outputChest.size();
         const craftableItems = [];
@@ -87,9 +87,9 @@ const submenus = {
                 bar.setProgress(currentCount / targetItem.count);
             } while (currentCount < targetItem.count);
         }
-        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, tonumber(count));
+        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, tonumber(count));
         print(`Crafted ${name} x ${count}`);
-        sleep(instance.settings.period);
+        sleep(settings.get("castlr.period"));
     },
     A(instance: Data) {
         const submenuText = [
@@ -155,10 +155,10 @@ const submenus = {
         instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
-        instance.getInventory(instance.settings.inputChest).syncData();
+        instance.getInventory(settings.get("castlr.inputChest")).syncData();
         if (getConsent("Also store items from outputs?")) {
             const asLuaSet = new LuaSet<string>();
-            asLuaSet.add(instance.settings.inputChest);
+            asLuaSet.add(settings.get("castlr.inputChest"));
             for (const recipeType of instance._recipeTypes)
                 // do not take items from an output with no input
                 // eg. cobble gens, vanilla farms
@@ -166,7 +166,7 @@ const submenus = {
                 // leading to a mass of items in storage unintentionally
                 if (recipeType.input !== "") instance.moveOneToMany(recipeType.output, asLuaSet);
         }
-        instance.moveOneToMany(instance.settings.inputChest, instance.getStoragesByType(StorageType.Storage));
+        instance.moveOneToMany(settings.get("castlr.inputChest"), instance.getStoragesByType(StorageType.Storage));
     },
     T(instance: Data) {
         const items = instance.getOrderedItemNames();
@@ -184,8 +184,8 @@ const submenus = {
         const intToTake = expressionEvaluator(expression);
         if (intToTake === 0) return;
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
-        instance.getInventory(instance.settings.outputChest).syncData();
-        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), instance.settings.outputChest, name, intToTake);
+        instance.getInventory(settings.get("castlr.outputChest")).syncData();
+        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, intToTake);
     },
     L(instance: Data) {
         const map = instance.getAllItems();
@@ -198,15 +198,36 @@ const submenus = {
         instance.init();
     }
 } as { [index: string]: undefined | ((this: void, instance: Data) => void) }
-
+/**
+ * Creates essential directories and defines settings for CASTLR.
+ */
 function install() {
     fs.makeDir("./types/");
     fs.makeDir("./recipes/");
-    writeFile("./settings.json", "{}");
+    /**
+     * The settings for the program.
+     * A user defined, constant value for a given run of the software that is accessible across
+     * the entirety of the software is a good candidate for addition to settings.
+     */
+    settings.define("castlr.inputChest", {
+        description: "The input chest for CASTLR.",
+        default: "left",
+        type: "string"
+    });
+    settings.define("castlr.outputChest", {
+        description: "The output chest for CASTLR.",
+        default: "right",
+        type: "string"
+    });
+    settings.define("castlr.period", {
+        description: "Time inserted after CASTLR operations to read output.",
+        default: 1,
+        type: "number"
+    });
 }
 
 function main() {
-    if (!fs.exists("./settings.json")) install();
+    install();
     // reset terminal in case of a non-blank display
     term.clear();
     term.setCursorPos(1, 1);
@@ -234,7 +255,7 @@ function main() {
             process(instance);
         } else {
             print("Invalid mode!");
-            sleep(instance.settings.period);
+            sleep(settings.get("castlr.period"));
         }
         instance.showLog();
     }
