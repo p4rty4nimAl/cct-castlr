@@ -1,5 +1,4 @@
 import {
-    writeFile,
     readFile,
     splitString,
     displayPages,
