@@ -167,7 +167,7 @@ const submenus = {
                 // eg. cobble gens, vanilla farms
                 // NOTE: include this in doc - set a recipe with no input to empty string else wont get detected
                 // leading to a mass of items in storage unintentionally
-                if (recipeType.input !== "") instance.moveOneToMany(recipeType.output, asLuaSet);
+                if (recipeType.input !== "" && recipeType.output !== settings.get("castlr.inputChest")) instance.moveOneToMany(recipeType.output, asLuaSet);
         }
         instance.moveOneToMany(settings.get("castlr.inputChest"), instance.getStoragesByType(StorageType.Storage));
     },
