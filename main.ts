@@ -90,7 +90,7 @@ const submenus = {
                 bar.setProgress(currentCount / targetItem.count);
             } while (currentCount < targetItem.count);
         }
-        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, tonumber(count));
+        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, expressionEvaluator(count));
         print(`Crafted ${name} x ${count}`);
         sleep(settings.get("castlr.period"));
     },
