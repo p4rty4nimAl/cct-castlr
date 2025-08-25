@@ -188,7 +188,6 @@ const submenus = {
         const [expression] = correctableInput(["amount to take"], [expressionValidator(0, max)], [expressionCompletor]);
         const intToTake = expressionEvaluator(expression);
         if (intToTake === 0) return;
-        instance.log("TAKE")(`taking ${intToTake} x ${name}`);
         instance.storage.getInventory(settings.get("castlr.outputChest")).syncData();
         instance.storage.moveItemFromMany(instance.storage.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, intToTake);
     },
@@ -261,7 +260,6 @@ function main() {
             print("Invalid mode!");
             sleep(settings.get("castlr.period"));
         }
-        instance.showLog();
     }
 }
 

@@ -1,13 +1,11 @@
 import {
     readFile,
     splitString,
-    displayPages,
     endsWith,
     orderStrings
 } from "./utils";
 import { Storage } from "./storage";
 
-const DEBUG = false;
 /**
  * This is the data controller for CASTLR. 
  * It controls: Recipes and their types.
@@ -248,25 +246,5 @@ export class Data {
             }
         }
         return [itemsGathered, newRecipeStack];
-    }
-
-    /**
-     * Create a new prefixed logger function.
-     * @param prefix The prefix to use for this logger.
-     * @returns A logger function.
-     */
-    log(prefix: string): (log: string) => void {
-        return (log: string): void => {
-            this._log.push(`${prefix}: ${log}`);
-        }
-    }
-
-    /**
-     * Displays all logs in pages to the user.
-     */
-    showLog(): void {
-        if (!DEBUG) return;
-        displayPages(this._log);
-        this._log = [];
     }
 }
