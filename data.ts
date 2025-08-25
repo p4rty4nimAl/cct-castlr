@@ -6,11 +6,7 @@ import {
 } from "./utils";
 import { Storage } from "./storage";
 
-/**
- * This is the data controller for CASTLR. 
- * It controls: Recipes and their types.
- */
-export class Data {
+export interface Data {
     /**
      * A set of all loaded recipe types.
      * This is a LuaSet, rather than an array, as the generated lua code is more readable.
@@ -30,16 +26,9 @@ export class Data {
     storage: Storage;
 
     /**
-     * A temporary store of logs until they are written out to the user.
-     */
-    _log: string[] = [];
-
-    /**
      * Creates a Data instance - Fields are initalised using {@link init}.
      */
-    constructor() {
-        this.init();
-    }
+    constructor(): void;
 
     /**
      * Initalise fields. In particular, this:
@@ -47,6 +36,86 @@ export class Data {
      * - Generates storage type sets, using data from recipe types.
      * - Wraps all connected inventory peripherals using {@link Storage}.
      */
+    init(): void;
+
+    /**
+     * This first validates a recipe. It must:
+     * - Be of a valid recipe type.
+     * - Not produce an item with an existing recipe.
+     * It then stores the recipe in the instance.
+     * @param recipe An unvalidated recipe to insert.
+     */
+    _addRecipe(recipe: Recipe): void;
+
+    /**
+     * This first validates a recipe type. It must:
+     * - Be a unique type.
+     * It then stores the recipe type in the instance, and loads all linked recipes the the corresponding ./recipes/${type} directory.
+     * @param recipe An unvalidated recipe to insert.
+     */
+    _addRecipeType(recipeType: RecipeType): void;
+
+    /**
+     * This will load, non-recursively, all of the recipe JSONs in the given directory.
+     * It calls {@link _addRecipe} for each one.
+     * @param directory The directory to load recipes from.
+     */
+    _loadRecipesFromDirectory(directory: string): void;
+
+    /**
+     * Iterates through all stored recipe types to collate all type IDs.
+     * @returns An ordered list of recipe type IDs.
+     */
+    getOrderedRecipeTypeIDs(): string[];
+
+    /**
+     * Look up a recipe type using its type ID.
+     * @param typeID The typeID for the desired {@link RecipeType}.
+     * @returns The {@link RecipeType} with the desired typeID.
+     */
+    getRecipeType(typeID: RecipeTypeIdentifier): RecipeType | undefined;
+
+    /**
+     * Look up a recipe using its output item name.
+     * @param itemOutput The name of the output item for the desired {@link Recipe}.
+     * @returns The {@link Recipe} with the desired output item.
+     */
+    getRecipe(itemOutput: string): Recipe | undefined;
+
+    /**
+     * Accessor method: get all stored {@link Recipe}s
+     * @returns All stored {@link Recipe}s as a LuaSet.
+     */
+    getAllRecipes(): LuaSet<Recipe>;
+
+    /**
+     * This function will find the necessary ingredients in storage.
+     * It prioritises least amount of intermediate crafts, using any items in storage first.
+     * If an item is not in storage, or cannot be crafted, it must be inserted.
+     * @param name The item name to craft.
+     * @param count The amount of the item to craft.
+     * @returns A map of item names to their counts.
+     * @returns An array, to be traversed as a stack upon which the crafting recipes to be performed are stored.
+     */
+    gatherIngredients(name: string, count: number): [LuaMap<string, number>, (Recipe & { count: number })[]];
+
+    
+}
+
+/**
+ * This is the data controller for CASTLR. 
+ * It controls: Recipes and their types.
+ */
+export class Data {
+    _recipeTypes: LuaSet<RecipeType>;
+    _recipes: LuaSet<Recipe>;
+
+    storage: Storage;
+
+    constructor() {
+        this.init();
+    }
+
     init() {
         // load recipes / types, get storage types
         this.loadRecipeTypesFromDirectory("./types/");
@@ -81,13 +150,6 @@ export class Data {
         }, peripherals);
     }
 
-    /**
-     * This first validates a recipe. It must:
-     * - Be of a valid recipe type.
-     * - Not produce an item with an existing recipe.
-     * It then stores the recipe in the instance.
-     * @param recipe An unvalidated recipe to insert.
-     */
     _addRecipe(recipe: Recipe) {
         let hasExistingType = false;
         for (const existingType of this._recipeTypes)
@@ -107,12 +169,6 @@ export class Data {
         this._recipes.add(recipe);
     }
 
-    /**
-     * This first validates a recipe type. It must:
-     * - Be a unique type.
-     * It then stores the recipe type in the instance, and loads all linked recipes the the corresponding ./recipes/${type} directory.
-     * @param recipe An unvalidated recipe to insert.
-     */
     _addRecipeType(recipeType: RecipeType) {
         for (const existingType of this._recipeTypes)
             if (existingType.typeID === recipeType.typeID) {
@@ -123,11 +179,6 @@ export class Data {
         this._loadRecipesFromDirectory(fs.combine('./recipes/', splitString(recipeType.typeID, ":")[1]));
     }
 
-    /**
-     * This will load, non-recursively, all of the recipe JSONs in the given directory.
-     * It calls {@link _addRecipe} for each one.
-     * @param directory The directory to load recipes from.
-     */
     _loadRecipesFromDirectory(directory: string) {
         const files = fs.list(directory);
         for (const i of $range(0, files.length - 1))
@@ -135,10 +186,6 @@ export class Data {
                 this._addRecipe(textutils.unserialiseJSON(readFile(fs.combine(directory, files[i]))) as Recipe);
     }
 
-    /**
-     * The will load recipe types from the given directory, calling {@link _addRecipeType} for each.
-     * @param directory The directory to load recipe types from.
-     */
     loadRecipeTypesFromDirectory(directory: string) {
         this._recipeTypes = new LuaSet();
         this._recipes = new LuaSet();
@@ -148,10 +195,6 @@ export class Data {
                 this._addRecipeType(textutils.unserialiseJSON(readFile(fs.combine(directory as string, files[i]))) as RecipeType);
     }
 
-    /**
-     * Iterates through all stored recipe types to collate all type IDs.
-     * @returns An ordered list of recipe type IDs.
-     */
     getOrderedRecipeTypeIDs(): string[] {
         const uniqueNames = new LuaSet<string>();
         for (const recipe of this._recipeTypes)
@@ -159,45 +202,22 @@ export class Data {
         return orderStrings(uniqueNames);
     }
 
-    /**
-     * Look up a recipe type using its type ID.
-     * @param typeID The typeID for the desired {@link RecipeType}.
-     * @returns The {@link RecipeType} with the desired typeID.
-     */
     getRecipeType(typeID: RecipeTypeIdentifier) {
         // typeID unique, return either matching recipe or undefined.
         for (const recipeType of this._recipeTypes)
             if (recipeType.typeID === typeID) return recipeType;
     }
 
-    /**
-     * Look up a recipe using its output item name.
-     * @param itemOutput The name of the output item for the desired {@link Recipe}.
-     * @returns The {@link Recipe} with the desired output item.
-     */
     getRecipe(itemOutput: string) {
         // output name unique, return either matching recipe or undefined.
         for (const recipe of this._recipes)
             if (recipe.output.name === itemOutput) return recipe;
     }
 
-    /**
-     * Accessor method: get all stored {@link Recipe}s
-     * @returns All stored {@link Recipe}s as a LuaSet.
-     */
     getAllRecipes() {
         return this._recipes;
     }
 
-    /**
-     * This function will find the necessary ingredients in storage.
-     * It prioritises least amount of intermediate crafts, using any items in storage first.
-     * If an item is not in storage, or cannot be crafted, it must be inserted.
-     * @param name The item name to craft.
-     * @param count The amount of the item to craft.
-     * @returns A map of item names to their counts.
-     * @returns An array, to be traversed as a stack upon which the crafting recipes to be performed are stored.
-     */
     gatherIngredients(name: string, count: number): [LuaMap<string, number>, (Recipe & { count: number })[]] {
         const itemsToGather: SlotDetail[] = [];
         const itemsGathered: LuaMap<string, number> = new LuaMap();
