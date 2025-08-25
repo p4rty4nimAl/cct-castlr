@@ -13,11 +13,7 @@ export class Inventory {
     // map of (item name) to (map of (slot index) to (item count))
     _slots: LuaMap<string, SlotCounts>;
     _name: string;
-    /**
-     * A storage type is a number that can be used to filter chests, such as inputs or outputs.
-     * It is used internally to prevent taking items from input chests.
-    */
-    type: StorageType;
+
     /**
      * This is the maximum amount of an item that can be stored in a single slot in the wrapped inventory.
      * - This is extrapolated from the first slot, and so issues may occur in storing unstackable items.
@@ -30,9 +26,8 @@ export class Inventory {
      * @param sType The type of storage that the {@link Inventory} can be filtered by.
      * @param itemLimit The maximum amount that an item can stack to in a single slot.
      */
-    constructor(peripheralName: string, sType: StorageType, itemLimit?: number) {
+    constructor(peripheralName: string, itemLimit?: number) {
         this._peripheral = peripheral.wrap(peripheralName) as InventoryPeripheral;
-        this.type = sType;
         this._name = peripheralName;
         this._size = this._peripheral.size();
         this.itemLimit = itemLimit ?? this._peripheral.getItemLimit(1);
@@ -52,7 +47,6 @@ export class Inventory {
      * @returns the amount stored of the given item
      */
     getItemCount(name: string): number {
-        if (this.type === StorageType.Input) return 0;
         let total = 0;
         const slots = this._slots.get(name);
         if (slots === undefined) return 0;
@@ -173,10 +167,6 @@ export class Inventory {
      * @see {@link https://tweaked.cc/generic_peripheral/inventory.html#v:pushItems|tweaked.cc#pushItems}
      */
     pushItems(to: Inventory, fromSlot: number, limit?: number) {
-        if (this.type === StorageType.Input) {
-            print("Error: attempting to push items from an input storage");
-            return;
-        }
         const itemToMove = this._list[fromSlot];
         limit = limit ?? (itemToMove.count ?? 0);
         let totalMoved = 0;
