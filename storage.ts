@@ -26,8 +26,9 @@ export interface Storage {
 
     /**
      * Wraps all connected inventory peripherals using {@link Inventory}.
+     * Alternatively, if peripherals is passed, it is used as the list of inventory peripherals to wrap.
      */
-    init(): void;
+    init(peripherals?: LuaMultiReturn<IPeripheral[]>): void;
 
     /**
      * Iterates through each connected inventory, building a map of item name to total counts.
@@ -106,17 +107,17 @@ export class Storage implements Storage{
     _inventories: LuaMap<string, Inventory>;
     _storagesByType: { [index in StorageType]: LuaSet<string> };
 
-    constructor(storagesByType: { [index in StorageType]: LuaSet<string> }) {
+    constructor(storagesByType: { [index in StorageType]: LuaSet<string> }, peripherals?: LuaMultiReturn<IPeripheral[]>) {
         this._storagesByType = storagesByType;
-        this.init();
+        this.init(peripherals);
     }
 
-    init() {
+    init(peripherals?: LuaMultiReturn<IPeripheral[]>) {
         // get inventory data
         this._inventories = new LuaMap();
-        const peripheralNames = peripheral.find("inventory");
+        peripherals = peripherals ?? peripheral.find("inventory");
         const newInvFuncs = [];
-        for (const inv of peripheralNames) {
+        for (const inv of peripherals) {
             const name = peripheral.getName(inv);
             newInvFuncs.push(() => {
                 this._inventories.set(name, new Inventory(name));

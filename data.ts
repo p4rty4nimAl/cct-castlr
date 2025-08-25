@@ -67,8 +67,8 @@ export class Data {
         }
 
         // get inventory data
-        const peripheralNames = peripheral.find("inventory");
-        for (const inv of peripheralNames) {
+        const peripherals = peripheral.find("inventory");
+        for (const inv of peripherals) {
             const name = peripheral.getName(inv);
             if (!inputs.has(name)) {
                 notInputs.add(name);
@@ -80,7 +80,7 @@ export class Data {
             [StorageType.Output]: outputs,
             [StorageType.Storage]: storages,
             [StorageType.NotInput]: notInputs
-        });
+        }, peripherals);
     }
 
     /**
