@@ -5,21 +5,14 @@ import {
     endsWith,
     orderStrings
 } from "./utils";
-import { Inventory } from "./inventory";
+import { Storage } from "./storage";
 
 const DEBUG = false;
 /**
  * This is the data controller for CASTLR. 
- * It controls: Recipes and their types; settings; storages.
- * TODO: split into separate controllers: recipes/types; settings; storages 
+ * It controls: Recipes and their types.
  */
 export class Data {
-    /**
-     * 
-     * A map of peripheral names as used in {@link peripheral.wrap}, to instances of {@link Inventory}
-     */
-    _inventories: LuaMap<string, Inventory>;
-
     /**
      * A set of all loaded recipe types.
      * This is a LuaSet, rather than an array, as the generated lua code is more readable.
@@ -33,10 +26,10 @@ export class Data {
     _recipes: LuaSet<Recipe>;
 
     /**
-     * Stores inventory peripheral names by their {@link StorageType}.
-     * This allows for access by type, using {@link getStoragesByType}.
+     * Reference to {@link Storage}, which controls inventory peripheral access.
+     * This allows for access by type, using {@link Storage.getStoragesByType}.
      */
-    _storagesByType: { [index in StorageType]: LuaSet<string> };
+    storage: Storage;
 
     /**
      * A temporary store of logs until they are written out to the user.
@@ -44,30 +37,26 @@ export class Data {
     _log: string[] = [];
 
     /**
-     * Creates a Data instance - Fields are not populated, and {@link init} should be called before using the instance.
+     * Creates a Data instance - Fields are initalised using {@link init}.
      */
     constructor() {
-        this._storagesByType = {
-            [StorageType.Input]: new LuaSet(),
-            [StorageType.Output]: new LuaSet(),
-            [StorageType.Storage]: new LuaSet(),
-            [StorageType.NotInput]: new LuaSet()
-        };
+        this.init();
     }
 
     /**
      * Initalise fields. In particular, this:
      * - Gathers recipes and their types read from ./recipes/ and ./types/, respectively.
-     * - Filters storages by type, using data from recipe types.
-     * - Wraps all connected inventory peripherals using {@link Inventory}.
+     * - Generates storage type sets, using data from recipe types.
+     * - Wraps all connected inventory peripherals using {@link Storage}.
      */
     init() {
         // load recipes / types, get storage types
         this.loadRecipeTypesFromDirectory("./types/");
-        // save in _storagesByType
-        const inputs = this._storagesByType[StorageType.Input];
-        const outputs = this._storagesByType[StorageType.Output];
-        const storages = this._storagesByType[StorageType.Storage];
+
+        const inputs = new LuaSet<string>();
+        const outputs = new LuaSet<string>();
+        const storages = new LuaSet<string>();
+        const notInputs = new LuaSet<string>();
         // treat outputChest like an input - do not store items, do not index
         inputs.add(settings.get("castlr.outputChest"));
         // treat inputChest like an output - do not store items, do index
@@ -78,22 +67,20 @@ export class Data {
         }
 
         // get inventory data
-        this._inventories = new LuaMap();
         const peripheralNames = peripheral.find("inventory");
-        const newInvFuncs = [];
         for (const inv of peripheralNames) {
             const name = peripheral.getName(inv);
-            let sType = StorageType.Storage;
-            if (inputs.has(name)) {
-                sType = StorageType.Input;
-            } else if (outputs.has(name)) {
-                sType = StorageType.Output;
-            } else storages.add(name);
-            newInvFuncs.push(() => {
-                this._inventories.set(name, new Inventory(name, sType));
-            });
+            if (!inputs.has(name)) {
+                notInputs.add(name);
+                if (!outputs.has(name)) storages.add(name);
+            }
         }
-        parallel.waitForAll(...newInvFuncs);
+        this.storage = new Storage({
+            [StorageType.Input]: inputs,
+            [StorageType.Output]: outputs,
+            [StorageType.Storage]: storages,
+            [StorageType.NotInput]: notInputs
+        });
     }
 
     /**
@@ -164,57 +151,6 @@ export class Data {
     }
 
     /**
-     * Gets the total amount of an item stored across all connected inventories by iterating through them.
-     * @param name The name of the item to get the count of.
-     * @returns The amount of that item that are stored.
-     */
-    getTotalItemCount(name: string) {
-        let total = 0;
-        for (const [,inventory] of this._inventories)
-            total += inventory.getItemCount(name);
-        return total;
-    }
-
-    /**
-     * Iterates through each connected inventory, building a map of item name to total counts.
-     * @returns A map of item names to their total counts.
-     */
-    getAllItems(): LuaMap<string, number> {
-        const itemMap = new LuaMap<string, number>();
-        for (const [, inv] of this._inventories)
-            for (const [name] of inv.getSlots()) {
-                const newCount = (itemMap.get(name) ?? 0) + inv.getItemCount(name);
-                itemMap.set(name, newCount);
-            }
-        return itemMap;
-    }
-
-    /**
-     * Iterates through all connected inventories to collate all unique item names. Additional names can be inserted.
-     * @param insertedValues Values to insert into the ordered item names, for autocompletion of craftable items.
-     * @returns An ordered list of item names.
-     */
-    getOrderedItemNames(insertedValues?: string[]): string[] {
-        const uniqueNames = new LuaSet<string>();
-        if (insertedValues !== undefined) for (const value of insertedValues) uniqueNames.add(value);
-        for (const [, inv] of this._inventories)
-            for (const [name] of inv.getSlots())
-                uniqueNames.add(name);
-        return orderStrings(uniqueNames);
-    }
-
-    /**
-     * Iterates through all connected inventories to collate all unique peripheral names.
-     * @returns An ordered list of inventory peripheral names.
-     */
-    getOrderedInventoryNames(): string[] {
-        const uniqueNames = new LuaSet<string>();
-        for (const [name] of this._inventories)
-            uniqueNames.add(name);
-        return orderStrings(uniqueNames);
-    }
-
-    /**
      * Iterates through all stored recipe types to collate all type IDs.
      * @returns An ordered list of recipe type IDs.
      */
@@ -223,21 +159,6 @@ export class Data {
         for (const recipe of this._recipeTypes)
             uniqueNames.add(recipe.typeID);
         return orderStrings(uniqueNames);
-    }
-
-    /**
-     * Allows access to inventory peripherals by their designated type: Input, Storage, Output.
-     * They can also be filted by NotInput, a union type of Storage and Output.
-     * @param sType The storage type to filter by.
-     * @returns A list of storages, all of the type filtered.
-     */
-    getStoragesByType(sType: StorageType) {
-        if (sType !== StorageType.NotInput)
-            return this._storagesByType[sType];
-        // for NotInput storage type, combine Storage and Output
-        const storages = this._storagesByType[StorageType.Storage];
-        for (const storage in this._storagesByType[StorageType.Output]) storages.add(storage);
-        return storages;
     }
 
     /**
@@ -271,86 +192,6 @@ export class Data {
     }
 
     /**
-     * Access a single inventory peripheral by name, without wrapping it again.
-     * If the inventory is not already wrapped, the instance will re-initalise to prevent issues when the chunks the system resides in are reloaded.
-     * @param name The name of the inventory peripheral to wrap.
-     * @returns The underlying peripheral.
-     */
-    getInventory(name: string) {
-        const maybeInventory = this._inventories.get(name);
-        if (maybeInventory !== undefined) return maybeInventory;
-        this.init();
-        return this._inventories.get(name);
-    }
-
-    /**
-     * This function will move items from a single source to many destinations.
-     * It will only move a single item, up to the given limit.
-     * @param from The name of the source inventory peripheral.
-     * @param to The name of the destination inventory peripherals.
-     * @param name The name of the item to move.
-     * @param limit The maximum amount of the item to move.
-     * @returns Whether the limit was reached successfully.
-     */
-    moveItemFromOne(from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean {
-        const srcInv = this._inventories.get(from);
-        const srcSlots = srcInv.getSlots().get(name);
-        if (srcSlots === undefined) return false;
-        for (const destStr of to) {
-            const destInv = this._inventories.get(destStr);
-            for (const [fromSlot] of srcSlots) {
-                limit -= srcInv.pushItems(destInv, fromSlot, limit);
-                if (limit === 0) return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * This function will move items from many sources to a single desination.
-     * It will only move a single item, up to the given limit.
-     * @param from The list of source inventory peripherals.
-     * @param to The destination inventory peripheral.
-     * @param name The name of the item to move.
-     * @param limit The maximum amount of the item to move.
-     * @returns The amount of items moved.
-     */
-    moveItemFromMany(from: LuaSet<string>, to: string, name: string, limit: number): number {
-        const destInv = this._inventories.get(to);
-        const startingLimit = limit;
-        // for each source inventory
-        for (const srcInvStr of from) {
-            const srcInv = this._inventories.get(srcInvStr);
-            const slotCounts = srcInv.getSlots().get(name);
-            if (slotCounts !== undefined)
-                // for every slot in inventory, given it is defined
-                for (const [fromSlot] of slotCounts) {
-                    // move items to destination, up to limit - new limit = old limit - amount moved
-                    limit -= srcInv.pushItems(destInv, fromSlot, limit);
-                    if (limit <= 0) return startingLimit;
-                }
-        }
-        return startingLimit - limit;
-    }
-
-    /**
-     * This function will move items from a single source to many desintations.
-     * It will move every item from the source that can be moved into the destinations given.
-     * @param from The source inventory to empty.
-     * @param to A list of the destination inventories.
-     */
-    moveOneToMany(from: string, to: LuaSet<string>) {
-        const srcInv = this.getInventory(from);
-        for (const destStr of to) {
-            // for each dest inventory
-            const destInv = this.getInventory(destStr);
-            for (const [fromSlot] of pairs(srcInv.list()))
-                // push items from source to destination
-                srcInv.pushItems(destInv, fromSlot);
-        }
-    }
-
-    /**
      * This function will find the necessary ingredients in storage.
      * It prioritises least amount of intermediate crafts, using any items in storage first.
      * If an item is not in storage, or cannot be crafted, it must be inserted.
@@ -368,7 +209,7 @@ export class Data {
             const currentOutput = itemsToGather.pop();
             // determine amount to craft, accounting for items in use by the recipe so far
             const currentUsage = itemsGathered.get(currentOutput.name) ?? 0;
-            const totalCount = this.getTotalItemCount(currentOutput.name);
+            const totalCount = this.storage.getTotalItemCount(currentOutput.name);
             // amount to craft = (amount to craft or take) - (available amount)
             const craftAmount = currentOutput.count - (totalCount - currentUsage);
             if (craftAmount > 0) {

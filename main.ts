@@ -18,13 +18,15 @@ import { expressionCompletor, expressionEvaluator, expressionValidator } from ".
 
 const submenus = {
     C(instance: Data) {
-        const outputChest = instance.getInventory(settings.get("castlr.outputChest"));
+        // gather data for input
+        const outputChest = instance.storage.getInventory(settings.get("castlr.outputChest"));
         outputChest.syncData();
         const max = outputChest.getItemLimit(1) * outputChest.size();
         const craftableItems = [];
         for (const recipe of instance.getAllRecipes())
             craftableItems.push(recipe.output.name);
-        const items = instance.getOrderedItemNames(craftableItems);
+        const items = instance.storage.getOrderedItemNames(craftableItems);
+        // get input
         const [name, count] = correctableInput(
             ["item to craft", "amount to craft"],
             [namespaceValidator, expressionValidator(1, max)],
@@ -37,7 +39,7 @@ const submenus = {
         for (const [name, usedCount] of itemsUsed) {
             if (usedCount !== 0) {
                 const strVal = `${name} x ${usedCount}`;
-                const storeCount = instance.getTotalItemCount(name);
+                const storeCount = instance.storage.getTotalItemCount(name);
                 currentStoreStrs.push(`${name} x ${storeCount}`);
                 if (storeCount < usedCount) missingStrs.push(strVal);
                 itemUseStrs.push(strVal);
@@ -62,7 +64,7 @@ const submenus = {
                 print(`Recipe to craft ${currentRecipe.output.name} not found!`);
                 return;
             }
-            const outputChest = instance.getInventory(recipeType.output);
+            const outputChest = instance.storage.getInventory(recipeType.output);
             // submit items to crafter
             // repeat (recipe mult) times, round robin to allow for recipes with specific order
             // prevents overload of too many of the same item preventing the recipe being completed
@@ -77,7 +79,7 @@ const submenus = {
             const bar = new ProgressBar();
             for (const _ of $range(1, repeatCount))
                 for (const inputItem of currentRecipe.input)
-                    if (instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier) < inputItem.count * countMultiplier) {
+                    if (instance.storage.moveItemFromMany(instance.storage.getStoragesByType(StorageType.NotInput), recipeType.input, inputItem.name, inputItem.count * countMultiplier) < inputItem.count * countMultiplier) {
                         print(`Error crafting ${currentRecipe.output.name}`);
                         sleep(settings.get("castlr.period"));
                         return;
@@ -90,7 +92,7 @@ const submenus = {
                 bar.setProgress(currentCount / targetItem.count);
             } while (currentCount < targetItem.count);
         }
-        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, expressionEvaluator(count));
+        instance.storage.moveItemFromMany(instance.storage.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, expressionEvaluator(count));
         print(`Crafted ${name} x ${count}`);
         sleep(settings.get("castlr.period"));
     },
@@ -100,11 +102,11 @@ const submenus = {
             "   R - add new recipe.",
             "Entry to add: "
         ];
-        const items = instance.getOrderedItemNames();
+        const items = instance.storage.getOrderedItemNames();
         const branches = {
             /** @noSelf **/
             T() {
-                const invs = instance.getOrderedInventoryNames();
+                const invs = instance.storage.getOrderedInventoryNames();
                 const [typeID, inputChest, outputChest] = correctableInput(
                     [
                         "namespaced recipe ID",
@@ -158,7 +160,7 @@ const submenus = {
         instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
-        instance.getInventory(settings.get("castlr.inputChest")).syncData();
+        instance.storage.getInventory(settings.get("castlr.inputChest")).syncData();
         if (getConsent("Also store items from outputs?")) {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(settings.get("castlr.inputChest"));
@@ -167,31 +169,31 @@ const submenus = {
                 // eg. cobble gens, vanilla farms
                 // NOTE: include this in doc - set a recipe with no input to empty string else wont get detected
                 // leading to a mass of items in storage unintentionally
-                if (recipeType.input !== "" && recipeType.output !== settings.get("castlr.inputChest")) instance.moveOneToMany(recipeType.output, asLuaSet);
+                if (recipeType.input !== "" && recipeType.output !== settings.get("castlr.inputChest")) instance.storage.moveOneToMany(recipeType.output, asLuaSet);
         }
-        instance.moveOneToMany(settings.get("castlr.inputChest"), instance.getStoragesByType(StorageType.Storage));
+        instance.storage.moveOneToMany(settings.get("castlr.inputChest"), instance.storage.getStoragesByType(StorageType.Storage));
     },
     T(instance: Data) {
-        const items = instance.getOrderedItemNames();
+        const items = instance.storage.getOrderedItemNames();
         const [name] = correctableInput(
             ["item name"],
             [(name: string) => {
-                const max = instance.getTotalItemCount(name);
+                const max = instance.storage.getTotalItemCount(name);
                 print(`${max} x ${name} stored.`);
                 return namespaceValidator(name);
             }],
             [stringCompletor(items)]
         );
-        const max = instance.getTotalItemCount(name);
+        const max = instance.storage.getTotalItemCount(name);
         const [expression] = correctableInput(["amount to take"], [expressionValidator(0, max)], [expressionCompletor]);
         const intToTake = expressionEvaluator(expression);
         if (intToTake === 0) return;
         instance.log("TAKE")(`taking ${intToTake} x ${name}`);
-        instance.getInventory(settings.get("castlr.outputChest")).syncData();
-        instance.moveItemFromMany(instance.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, intToTake);
+        instance.storage.getInventory(settings.get("castlr.outputChest")).syncData();
+        instance.storage.moveItemFromMany(instance.storage.getStoragesByType(StorageType.NotInput), settings.get("castlr.outputChest"), name, intToTake);
     },
     L(instance: Data) {
-        const map = instance.getAllItems();
+        const map = instance.storage.getAllItems();
         const strings = new LuaSet<string>();
         for (const [name, count] of map)
             strings.add(`${name} x ${count}`);
@@ -248,7 +250,6 @@ function main() {
     ];
     print("Initalising..");
     const instance = new Data();
-    instance.init();
     while (true) {
         term.clear();
         term.setCursorPos(1, 1);
