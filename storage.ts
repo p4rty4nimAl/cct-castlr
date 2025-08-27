@@ -48,13 +48,13 @@ export interface Storage {
      * @param insertedValues Values to insert into the ordered item names, for autocompletion of craftable items.
      * @returns An ordered list of item names.
      */
-    getOrderedItemNames(insertedValues?: string[]): string[];
+    getItemNames(insertedValues?: string[]): string[];
 
     /**
      * Iterates through all connected inventories to collate all unique peripheral names.
      * @returns An ordered list of inventory peripheral names.
      */
-    getOrderedInventoryNames(): string[];
+    getInventoryNames(): string[];
 
     /**
      * Allows access to inventory peripherals by their designated type: Input, Storage, Output.
@@ -143,20 +143,20 @@ export class Storage implements Storage{
         return total;
     }
 
-    getOrderedItemNames(insertedValues?: string[]): string[] {
-        const uniqueNames = new LuaSet<string>();
-        if (insertedValues !== undefined) for (const value of insertedValues) uniqueNames.add(value);
+    getItemNames(insertedValues?: string[]): string[] {
+        const uniqueNames: string[] = [];
+        if (insertedValues !== undefined) for (const value of insertedValues) uniqueNames.push(value);
         for (const [, inv] of this._inventories)
             for (const [name] of inv.getSlots())
-                uniqueNames.add(name);
-        return orderStrings(uniqueNames);
+                uniqueNames.push(name);
+        return uniqueNames;
     }
 
-    getOrderedInventoryNames(): string[] {
-        const uniqueNames = new LuaSet<string>();
+    getInventoryNames(): string[] {
+        const uniqueNames: string[] = [];
         for (const [name] of this._inventories)
-            uniqueNames.add(name);
-        return orderStrings(uniqueNames);
+            uniqueNames.push(name);
+        return uniqueNames;
     }
 
     getStoragesByType(sType: StorageType) {

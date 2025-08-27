@@ -85,36 +85,19 @@ export const intValidator = (min: number, max: number) => (int: string) => {
  */
 export const namespaceValidator = (value: string) => splitString(value, ":").length === 2;
 /**
- * Convert a Set of strings into a sorted array of strings
- * @param uniqueStrings A LuaSet of strings guarantees there are no duplicates.
- * @returns The set as a sorted array.
- */
-export const orderStrings = (uniqueStrings: LuaSet<string>): string[] => {
-    // order item names for efficient searching
-    // - not including this breaks autocompletion algorithm
-    const orderedStrings: string[] = [];
-    for (const val of uniqueStrings)
-        orderedStrings.push(val);
-    table.sort(orderedStrings);
-    return orderedStrings;
-}
-/**
  * Get strings that the current partial input could complete to.
- * @param orderedStrs The search space of strings to complete to.
+ * @param possibleStrs The search space of strings to complete to.
  * @returns A function that returns the array of the remaining parts of possible completions given a partial string.
  */
-export const stringCompletor = (orderedStrs: string[]) => {
+export const stringCompletor = (possibleStrs: string[]) => {
     /** @noSelf **/
     return (partial: string) => {
         const completeValues: string[] = [];
         // if no input, return all.
-        if (partial.length === 0) return orderedStrs;
-        for (const i of $range(0, orderedStrs.length - 1)) {
-            if (string.sub(orderedStrs[i], 1, partial.length) === partial) {
-                completeValues.push(string.sub(orderedStrs[i], partial.length + 1));
-                // items found, current item invalid
-                // allowed values sorted - no further values will be valid, can early exit
-            } else if (completeValues.length !== 0) return completeValues;
+        if (partial.length === 0) return possibleStrs;
+        for (const str of possibleStrs) {
+            if (string.sub(str, 1, partial.length) === partial)
+                completeValues.push(string.sub(str, partial.length + 1));
         }
         return completeValues;
     }
@@ -285,7 +268,7 @@ export const readline = (prompt: string, func?: (partial: string, event?: LuaMul
  * @param query The query to find within each string in the given array.
  * @returns The matching values.
  */
-export const stringSearch = (searchSpace: string[], query: string): string[] => {
+export const stringSearch = (searchSpace: LuaSet<string>, query: string): string[] => {
     const matches = [];
     const queryRegex = `.*${query}.*`;
     for (const haystack of searchSpace)

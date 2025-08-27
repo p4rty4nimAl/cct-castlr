@@ -9,7 +9,6 @@ import {
     displayPages,
     stringCompletor,
     displaySearch,
-    orderStrings,
     ProgressBar,
     getConsent
 } from "./utils";
@@ -22,10 +21,10 @@ const submenus = {
         const outputChest = instance.storage.getInventory(settings.get("castlr.outputChest"));
         outputChest.syncData();
         const max = outputChest.getItemLimit(1) * outputChest.size();
-        const craftableItems = [];
+        const craftableItems: string[] = [];
         for (const recipe of instance.getAllRecipes())
             craftableItems.push(recipe.output.name);
-        const items = instance.storage.getOrderedItemNames(craftableItems);
+        const items = instance.storage.getItemNames(craftableItems);
         // get input
         const [name, count] = correctableInput(
             ["item to craft", "amount to craft"],
@@ -102,11 +101,11 @@ const submenus = {
             "   R - add new recipe.",
             "Entry to add: "
         ];
-        const items = instance.storage.getOrderedItemNames();
+        const items = instance.storage.getItemNames();
         const branches = {
             /** @noSelf **/
             T() {
-                const invs = instance.storage.getOrderedInventoryNames();
+                const invs = instance.storage.getInventoryNames();
                 const [typeID, inputChest, outputChest] = correctableInput(
                     [
                         "namespaced recipe ID",
@@ -122,7 +121,7 @@ const submenus = {
             },
             /** @noSelf **/
             R() {
-                const recipeTypeStrs = instance.getOrderedRecipeTypeIDs();
+                const recipeTypeStrs = instance.getRecipeTypeIDs();
                 const [typeID, outputItemID, outputItemCount] = correctableInput(
                     [
                         "namespaced recipe ID",
@@ -174,7 +173,7 @@ const submenus = {
         instance.storage.moveOneToMany(settings.get("castlr.inputChest"), instance.storage.getStoragesByType(StorageType.Storage));
     },
     T(instance: Data) {
-        const items = instance.storage.getOrderedItemNames();
+        const items = instance.storage.getItemNames();
         const [name] = correctableInput(
             ["item name"],
             [(name: string) => {
@@ -196,7 +195,7 @@ const submenus = {
         const strings = new LuaSet<string>();
         for (const [name, count] of map)
             strings.add(`${name} x ${count}`);
-        displaySearch(orderStrings(strings));
+        displaySearch(strings);
     },
     R(instance: Data) {
         instance.init();

@@ -1,8 +1,7 @@
 import {
     readFile,
     splitString,
-    endsWith,
-    orderStrings
+    endsWith
 } from "./utils";
 import { Storage } from "./storage";
 
@@ -66,7 +65,7 @@ export interface Data {
      * Iterates through all stored recipe types to collate all type IDs.
      * @returns An ordered list of recipe type IDs.
      */
-    getOrderedRecipeTypeIDs(): string[];
+    getRecipeTypeIDs(): string[];
 
     /**
      * Look up a recipe type using its type ID.
@@ -195,11 +194,11 @@ export class Data {
                 this._addRecipeType(textutils.unserialiseJSON(readFile(fs.combine(directory as string, files[i]))) as RecipeType);
     }
 
-    getOrderedRecipeTypeIDs(): string[] {
-        const uniqueNames = new LuaSet<string>();
+    getRecipeTypeIDs(): string[] {
+        const uniqueNames: string[] = [];
         for (const recipe of this._recipeTypes)
-            uniqueNames.add(recipe.typeID);
-        return orderStrings(uniqueNames);
+            uniqueNames.push(recipe.typeID);
+        return uniqueNames;
     }
 
     getRecipeType(typeID: RecipeTypeIdentifier) {
