@@ -2,7 +2,7 @@ import { Inventory } from "./inventory";
 
 /**
  * Controller for groups of inventories, with utility methods to view them as a group.
- * Items can be moved between inventories using
+ * Items can be moved between inventories using the utility methods provided.
  */
 export interface Storage {
     /**
@@ -102,7 +102,7 @@ export interface Storage {
     moveOneToMany(from: string, to: LuaSet<string>): void;
 }
 
-export class Storage implements Storage{
+export class Storage {
     _inventories: LuaMap<string, Inventory>;
     _storagesByType: { [index in StorageType]: LuaSet<string> };
 

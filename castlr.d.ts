@@ -22,3 +22,6 @@ type Settings = {
     inputChest: RecipeLocation
     outputChest: RecipeLocation
 }
+
+// map of index to count
+type SlotCounts = LuaMap<number, number>;
