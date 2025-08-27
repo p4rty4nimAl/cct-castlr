@@ -39,7 +39,8 @@ const tokeniser = (expr: string): (number | string)[] => {
     let buffer = "";
     const tokens = [];
 
-    for (const char of expr) {
+    for (const i of $range(1, expr.length + 1)) {
+        const char = string.sub(expr, i, i)
         if (char === "=") break;
         // number test
         if (string.find(char, "[0-9\.]")[0] !== undefined) {

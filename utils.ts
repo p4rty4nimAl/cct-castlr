@@ -141,7 +141,8 @@ export const displayMenu = (displayText: string[]): string => {
  * @param lines The strings to page through.
  * @param height The maximum amount of strings to display at once.
  */
-export const displayPages = (lines: string[], height: number = term.getSize()[1]) => {
+export const displayPages = (lines: string[], height?: number) => {
+    height = height ?? term.getSize()[1];
     const pageSize = height - 2;
     const totalPages = Math.ceil(lines.length / pageSize);
     let currentPage = 1;
@@ -281,7 +282,8 @@ export const stringSearch = (searchSpace: LuaSet<string>, query: string): string
  * @param lines The strings to search through.
  * @param height The maximum amount of strings to display at once.
  */
-export const displaySearch = (lines: string[], height: number = term.getSize()[1]) => {
+export const displaySearch = (lines: LuaSet<string>, height?: number) => {
+    height = height ?? term.getSize()[1];
     // move existing text out of the way
     term.scroll(height - 2);
     let offset = 0;

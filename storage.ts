@@ -1,5 +1,4 @@
 import { Inventory } from "./inventory";
-import { orderStrings } from "./utils";
 
 /**
  * Controller for groups of inventories, with utility methods to view them as a group.
