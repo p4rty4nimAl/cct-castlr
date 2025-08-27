@@ -63,22 +63,30 @@ export class Inventory {
     }
 
     /**
-     * This generator yields slot indexes for the inventory at which the specified item can be inserted.
-     * If it is `done`, there are no more available slots for the item to be inserted at.
+     * This function returns a coroutine that yields slot indexes for the inventory at which the specified item can be inserted.
+     * If it is dead, there are no more available slots for the item to be inserted at.
      */
-    * getNextAvailableSlot(name: string): Generator<number, void, undefined> {
-        // check all slots of item - if none work, return empty slot
-        const slotCounts = this._slots.get(name);
-        if (slotCounts !== undefined)
-            for (const [slot, count] of slotCounts)
-                if (count < this.itemLimit)
-                    yield slot;
-        // return slot if empty, inventories are 1-indexed
-        for (const i of $range(1, this.size())) if (this.getSlot(i) === undefined) {
-            yield i;
-            for (const value of this.getNextAvailableSlot(name)) yield value;
-        }
-        return;
+    getNextAvailableSlot(name: string) {
+        return coroutine.create(() => {
+            // check all slots of item - if none work, return empty slot
+            const slotCounts = this._slots.get(name);
+            if (slotCounts !== undefined)
+                for (const [slot, count] of slotCounts)
+                    if (count < this.itemLimit)
+                        coroutine.yield(slot);
+            // return slot if empty, inventories are 1-indexed
+            for (const i of $range(1, this.size())) if (this.getSlot(i) === undefined) {
+                coroutine.yield(i);
+                let alive = true;
+                let slot: number | string;
+                while (alive) {
+                    [alive, slot] = coroutine.resume(this.getNextAvailableSlot(name)) as [true, number] | [false, string];
+                    if (!alive) return;
+                    coroutine.yield(slot as number);
+                }
+                // for (const value of this.getNextAvailableSlot(name)) yield value;
+            }
+        });
     }
 
     /**
@@ -172,11 +180,9 @@ export class Inventory {
         let totalMoved = 0;
         const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
         while (totalMoved < limit && itemToMove.count !== undefined) {
-            const nextSlot = slotGenerator.next();
-            if (nextSlot.done) return totalMoved;
-            // will never be void due to above check
-            const toSlot = nextSlot.value as number;
-            const amountMoved = this._peripheral.pushItems(to.getName(), fromSlot, limit - totalMoved, toSlot);
+            const [alive, nextSlot] = coroutine.resume(slotGenerator);
+            if (!alive) return totalMoved;
+            const amountMoved = this._peripheral.pushItems(to.getName(), fromSlot, limit - totalMoved, nextSlot);
             totalMoved += amountMoved;
             // sync stored data in src
             // setting value to 'undefined' is the same as removing it
@@ -185,7 +191,7 @@ export class Inventory {
             this._slots.get(itemToMove.name).set(fromSlot, newSlotCount);
             itemToMove.count = newSlotCount;
             // sync stored data in dest
-            to.receiveItems(itemToMove.name, toSlot, amountMoved);
+            to.receiveItems(itemToMove.name, nextSlot, amountMoved);
         }
         return totalMoved;
     }
