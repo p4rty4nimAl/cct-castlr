@@ -179,7 +179,7 @@ export class Inventory {
                 coroutine.yield(i);
                 const delegated = this.getNextAvailableSlot(name);
                 while (true) {
-                    const [slot] = delegated()[0];
+                    const [slot] = delegated();
                     if (slot === undefined) return;
                     coroutine.yield(slot);
                 }
