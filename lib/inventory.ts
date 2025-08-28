@@ -195,14 +195,12 @@ export class Inventory {
             this._slots.set(name, currentSlots);
         }
         const newAmount = (currentSlots.get(slot) ?? 0) + count;
-        // if (currentAmount + count > this.getItemLimit(slot)) DEBUG && print("issue - receiveItems called with excessive value");
         currentSlots.set(slot, newAmount);
         // update this._list
         if (this._list[slot] === undefined) {
             const slotDetail: SlotDetail = { name, count };
             this._list[slot] = slotDetail;
         } else {
-            // if (this._list[slot].name !== name) DEBUG && print("issue - receiveItems called with wrong name");
             this._list[slot].count = newAmount;
         }
     }
