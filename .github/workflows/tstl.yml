@@ -1,0 +1,29 @@
+name: TypeScript To Lua
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+    branches:
+    - master
+
+jobs:
+  build_and_publish:
+    runs-on: ubuntu-latest
+    name: Build and Publish
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Set up npm
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+    - name: Install and run TSTL
+      run: |
+        npm install 
+        npm run build
+    - name: Publish artifact
+      uses: actions/upload-artifact@v4
+      with:
+        path: main.lua
