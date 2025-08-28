@@ -44,12 +44,13 @@ const submenus = {
                 itemUseStrs.push(strVal);
             }
         }
+        term.clear();
+        term.setCursorPos(1, 1);
         if (missingStrs.length > 0) {
             print("Error: the following items must be inserted:");
             displayPages(missingStrs, false);
             return;
         }
-        if (getConsent("Display current store counts?")) displayPages(currentStoreStrs);
         print("The following items will be consumed:");
         displayPages(itemUseStrs, false);
         if (!getConsent("Is the above correct?")) return;

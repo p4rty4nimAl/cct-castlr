@@ -169,6 +169,7 @@ export class Data {
     }
 
     _addRecipeType(recipeType: RecipeType) {
+        if (recipeType.input === undefined || recipeType.output === undefined) return;
         for (const existingType of this._recipeTypes)
             if (existingType.typeID === recipeType.typeID) {
                 print("Recipe types with types matching another are not allowed.");
