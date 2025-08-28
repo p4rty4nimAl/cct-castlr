@@ -1,5 +1,3 @@
-// this library seeks to implement mathematical expression evaluation
-
 import { intValidator } from "./utils";
 
 type Token = number | string;
