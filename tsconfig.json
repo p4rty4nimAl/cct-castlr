@@ -16,6 +16,7 @@
         "luaBundleEntry": "main.ts"
     },
     "include": [
-        "./*.ts"
+        "./*.ts",
+        "lib/*.ts",
     ]
 }

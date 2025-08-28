@@ -11,9 +11,9 @@ import {
     displaySearch,
     ProgressBar,
     getConsent
-} from "./utils";
-import { Data } from "./data";
-import { expressionCompletor, expressionEvaluator, expressionValidator } from "./expressions";
+} from "./lib/utils";
+import { Data } from "./lib/data";
+import { expressionCompletor, expressionEvaluator, expressionValidator } from "./lib/expressions";
 
 const submenus = {
     C(instance: Data) {
