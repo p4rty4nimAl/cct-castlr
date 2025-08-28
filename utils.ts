@@ -141,14 +141,20 @@ export const displayMenu = (displayText: string[]): string => {
  * @param lines The strings to page through.
  * @param height The maximum amount of strings to display at once.
  */
-export const displayPages = (lines: string[], height?: number) => {
-    height = height ?? term.getSize()[1];
-    const pageSize = height - 2;
+export const displayPages = (lines: string[], fullscreen: boolean = true) => {
+    let y = 1;
+    if (!fullscreen) y = term.getCursorPos()[1];
+    // if not in fullscreen, cannot use last line due to text at the top of the screen
+    // scrolling out of view when input is recieved
+    const pageSize = term.getSize()[1] - y - (fullscreen ? 0 : 1);
     const totalPages = Math.ceil(lines.length / pageSize);
     let currentPage = 1;
     while (currentPage <= totalPages) {
-        for (const i of $range((currentPage - 1) * pageSize, currentPage * pageSize - 1))
+        term.setCursorPos(1, y);
+        for (const i of $range((currentPage - 1) * pageSize, currentPage * pageSize - 1)) {
+            term.clearLine();
             print(lines[i] ?? "");
+        }
         const nextPageInt = tonumber(getInput(`Page ${currentPage} of ${totalPages} - Enter page number: `));
         // NaN check / increment
         currentPage = nextPageInt ?? currentPage + 1;
@@ -282,21 +288,24 @@ export const stringSearch = (searchSpace: LuaSet<string>, query: string): string
  * @param lines The strings to search through.
  * @param height The maximum amount of strings to display at once.
  */
-export const displaySearch = (lines: LuaSet<string>, height?: number) => {
-    height = height ?? term.getSize()[1];
-    // move existing text out of the way
-    term.scroll(height - 2);
+export const displaySearch = (lines: LuaSet<string>, fullscreen: boolean = true) => {
+    let y = 1;
+    if (!fullscreen) y = term.getCursorPos()[1];
+    const height = term.getSize()[1] - y + 1;
     let offset = 0;
     const callback = (partial: string, event?: LuaMultiReturn<[string, ...unknown[]]>) => {
         const matchingLines = stringSearch(lines, partial);
         while (matchingLines[offset] === undefined && offset !== 0) offset--;
         if (event !== undefined && event[0] === "key") {
+            // TODO: page up/down support
             if (event[1] === keys.down && matchingLines[height + offset + 1] !== undefined) offset++;
             if (event[1] === keys.up && matchingLines[offset - 1] !== undefined) offset--;
         }
-        write("\n");
-        for (const i of $range(0, height - 2))
+        term.setCursorPos(1, y);
+        for (const i of $range(0, height - 2)) {
+            term.clearLine()
             print(matchingLines[i + offset] ?? "");
+        }
     }
     callback("");
     readline("Enter search query: ", callback);

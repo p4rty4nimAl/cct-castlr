@@ -46,12 +46,12 @@ const submenus = {
         }
         if (missingStrs.length > 0) {
             print("Error: the following items must be inserted:");
-            displayPages(missingStrs);
+            displayPages(missingStrs, false);
             return;
         }
         if (getConsent("Display current store counts?")) displayPages(currentStoreStrs);
         print("The following items will be consumed:");
-        displayPages(itemUseStrs);
+        displayPages(itemUseStrs, false);
         if (!getConsent("Is the above correct?")) return;
         // reset for progress bar positioning
         term.clear();
