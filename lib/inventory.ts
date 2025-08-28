@@ -39,7 +39,7 @@ export interface Inventory {
      * @param name The name of the item to find a slot for.
      * @returns A coroutine to find subsequent available slots.
      */
-    getNextAvailableSlot(name: string): LuaThread;
+    getNextAvailableSlot(name: string): (this: void) => LuaMultiReturn<any[]>;
 
     /**
      * This function exists to keep the cache in sync with the real inventory.
@@ -166,8 +166,8 @@ export class Inventory {
         return this._name;
     }
 
-    getNextAvailableSlot(name: string): LuaThread {
-        return coroutine.create(() => {
+    getNextAvailableSlot(name: string): (this: void) => LuaMultiReturn<any[]> {
+        return coroutine.wrap(() => {
             // check all slots of item - if none work, return empty slot
             const slotCounts = this._slots.get(name);
             if (slotCounts !== undefined)
@@ -177,14 +177,12 @@ export class Inventory {
             // return slot if empty, inventories are 1-indexed
             for (const i of $range(1, this.size())) if (this.getSlot(i) === undefined) {
                 coroutine.yield(i);
-                let alive = true;
-                let slot: number | string;
-                while (alive) {
-                    [alive, slot] = coroutine.resume(this.getNextAvailableSlot(name)) as [true, number] | [false, string];
-                    if (!alive) return;
-                    coroutine.yield(slot as number);
+                const delegated = this.getNextAvailableSlot(name);
+                while (true) {
+                    const [slot] = delegated()[0];
+                    if (slot === undefined) return;
+                    coroutine.yield(slot);
                 }
-                // for (const value of this.getNextAvailableSlot(name)) yield value;
             }
         });
     }
@@ -248,8 +246,8 @@ export class Inventory {
         let totalMoved = 0;
         const slotGenerator = to.getNextAvailableSlot(itemToMove.name);
         while (totalMoved < limit && itemToMove.count !== undefined) {
-            const [alive, nextSlot] = coroutine.resume(slotGenerator);
-            if (!alive) return totalMoved;
+            const [nextSlot] = slotGenerator();
+            if (nextSlot === undefined) return totalMoved;
             const amountMoved = this._peripheral.pushItems(to.getName(), fromSlot, limit - totalMoved, nextSlot);
             totalMoved += amountMoved;
             // sync stored data in src
