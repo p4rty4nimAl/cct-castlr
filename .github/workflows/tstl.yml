@@ -40,13 +40,12 @@ jobs:
     steps:
     - name: Get artifact
       uses: actions/download-artifact@v4
-    - name: Switch directory
-      run: cd artifact
     - name: Upload release
       env: 
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.ref_name }}
       run: |
+        cd artifact;
         gh release create "$tag" \
           --title="${tag#v}" \
           --generate-notes \
