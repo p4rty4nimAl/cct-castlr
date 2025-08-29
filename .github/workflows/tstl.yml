@@ -48,6 +48,7 @@ jobs:
         tag: ${{ github.ref_name }}
       run: |
         gh release create "$tag" \
+          --repo=${{  github.repository }} \
           --title="${tag#v}" \
           --generate-notes \
           --fail-on-no-commits \
