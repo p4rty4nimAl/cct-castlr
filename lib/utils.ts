@@ -277,9 +277,15 @@ export const readline = (prompt: string, func?: (partial: string, event?: LuaMul
  */
 export const stringSearch = (searchSpace: LuaSet<string>, query: string): string[] => {
     const matches = [];
-    const queryRegex = `.*${query}.*`;
+    
+    const queryPattern = `.*${query}.*`;
+    const [success] = pcall(() => string.find("", queryPattern));
+    if (!success) {
+        matches.push("Error: Invalid pattern.");
+        return matches;
+    }
     for (const haystack of searchSpace)
-        if (string.find(haystack, queryRegex)[0] !== undefined)
+        if (string.find(haystack, queryPattern)[0] !== undefined)
             matches.push(haystack);
     return matches;
 }
