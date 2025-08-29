@@ -2,16 +2,18 @@ name: TypeScript To Lua
 
 on:
   push:
-    branches:
-    - master
+    branches: |
+      master
+      main
   pull_request:
-    branches:
-    - master
+    branches: |
+      master
+      main
 
 jobs:
-  build_and_publish:
+  build_artifact:
     runs-on: ubuntu-latest
-    name: Build and Publish
+    name: Build and publish artifact
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -21,9 +23,30 @@ jobs:
         node-version: '22'
     - name: Install and run TSTL
       run: |
-        npm install 
+        npm install
         npm run build
     - name: Publish artifact
       uses: actions/upload-artifact@v4
       with:
         path: main.lua
+  release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' }}
+    needs:
+      build_artifact
+    name: Upload release
+    steps:
+    - name: Get artifact
+      uses: actions/download-artifact@v4
+    - name: Upload release
+      env: 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ github.ref_name }}
+      run: |
+        gh release create "$tag" \
+          --title="${tag#v}" \
+          --generate-notes \
+          --fail-on-no-commits \
+          main.lua
