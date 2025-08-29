@@ -45,9 +45,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         tag: ${{ github.ref_name }}
       run: |
-        cd artifact;
         gh release create "$tag" \
           --title="${tag#v}" \
           --generate-notes \
-          --fail-on-no-commits \
-          main.lua
+          --fail-on-no-commits
