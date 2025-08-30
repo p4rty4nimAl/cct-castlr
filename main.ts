@@ -202,10 +202,23 @@ const submenus = {
         instance.init();
     }
 } as { [index: string]: undefined | ((this: void, instance: Data) => void) }
+
+/**
+ * Get the latest release tag.
+ * @returns The tag name of the latest release, or undefined.
+ */
+function getReleaseDetails() {
+    const versionTestURL = "https://api.github.com/repos/p4rty4nimAl/cct-castlr/releases";
+    if (!http.checkURL(versionTestURL)) return;
+    const tagName = textutils.unserialiseJSON(http.get(versionTestURL)[0].readAll()).tag_name;
+    return tagName;
+}
 /**
  * Creates essential directories and defines settings for CASTLR.
+ * @returns Whether a restart is required.
  */
-function install() {
+function install(): boolean {
+    // Create directories, preventing crash on recipe/type addition
     fs.makeDir("./types/");
     fs.makeDir("./recipes/");
     /**
@@ -228,10 +241,34 @@ function install() {
         default: 1,
         type: "number"
     });
-}
+    if (http) {
+        const currentVersion = settings.get("castlr.version");
+        settings.define("castlr.version", {
+            description: "The version of CASTLR to use.",
+            default: getReleaseDetails() ?? "vM.m.p", // Major, minor, patch
+            type: "string"
+        });
 
-function main() {
-    install();
+        if (settings.get("castlr.version") !== currentVersion) {
+            // update
+            const releaseTemplate = ["https://github.com/p4rty4nimAl/cct-castlr/releases/download/", "/main.lua"];
+            const url = releaseTemplate[0] + settings.get("castlr.version") + releaseTemplate[1];
+            if (!http.checkURL(url)) return;
+            const response = http.get(url)[0];
+            // check for failure
+            if (response === undefined) return;
+
+            writeFile("main.lua", response.readAll());
+            print(`Updated to ${settings.get("castlr.version")}, please restart CASTLR.`);
+        }
+
+    }
+}
+/**
+ * The main loop of the program
+ */
+function main(): void {
+    if (install()) return;
     // reset terminal in case of a non-blank display
     term.clear();
     term.setCursorPos(1, 1);
