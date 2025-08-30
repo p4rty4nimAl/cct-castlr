@@ -270,10 +270,15 @@ function install(): boolean {
  * The main loop of the program
  */
 function main(): void {
-    if (install()) return;
     // reset terminal in case of a non-blank display
     term.clear();
     term.setCursorPos(1, 1);
+
+    if (install()) {
+        shell.run("main.lua");
+        return;
+    }
+
     for (const keyboard of peripheral.find("tm_keyboard"))
         (keyboard as KeyboardPeripheral).setFireNativeEvents(true);
     const menuStrings = [
