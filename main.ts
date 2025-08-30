@@ -302,15 +302,31 @@ function main(): void {
 
 main();
 
-// notes:
 /*
-make documentation, suggest human:input recipe type
-    - allows to drop settings.inputChest + outputChest from most/some special considerations
-IDEAS:
+possible future features:
     try catch main loop
-    catch errors, log somewhere? do not crash
-    parallel crafting: requires
-        - ui overhaul - progress bars
-        - collate all duplicate crafting recipes in the stack
-        - moving items as they become available over moving them all at once
+    - log errors
+    
+    optional secondary system:
+    - write out recipes to disk for transfer - CraftOS already provides utilities for this
+    - write out storage contents to file / pocket computer
+    - rednet access - read only
+    
+    read material list output from litematica
+    
+    stream processing:
+    - moving items as they are produced / space is made in input (current behaviour: move them all at once)
+    - coroutine for each recipe
+    - option to output crafts into storage - for users without a large chest mod
+
+    display total capacity / used
+
+    recipe lister
+    - list all available recipes, searchable
+
+    recipe visualiser
+    - tree view
+    - scrollable window
+
+    prevent recipe loops (ingot <- block <- ingot)
 */
