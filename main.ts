@@ -275,7 +275,7 @@ function main(): void {
     for (const keyboard of peripheral.find("tm_keyboard"))
         (keyboard as KeyboardPeripheral).setFireNativeEvents(true);
     const menuStrings = [
-        "Welcome to CASTLR!", // Computer Aided Storage, Technical Logistic Regulator
+        "Welcome to CASTLR! (" + settings.get("castlr.version") + ")", // Computer Aided Storage, Technical Logistic Regulator
         "   C - craft an item.",
         "   A - add a new recipe / type.",
         "   S - store all items in input chest.",
