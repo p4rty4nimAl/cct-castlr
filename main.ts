@@ -242,25 +242,26 @@ function install(): boolean {
         type: "number"
     });
     if (http) {
-        const currentVersion = settings.get("castlr.version");
+        const currentVersion = settings.get("castlr._installed_version");
         const newVersion = getReleaseDetails() || "vM.m.p"; // Major, minor, patch
         settings.define("castlr.version", {
             description: "The version of CASTLR to use.",
             default: newVersion,
             type: "string"
         });
-
         if (settings.get("castlr.version") !== currentVersion) {
             // update
-            const releaseTemplate = ["https://github.com/p4rty4nimAl/cct-castlr/releases/download/", "/main.lua"];
-            const url = releaseTemplate[0] + settings.get("castlr.version") + releaseTemplate[1];
+            const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + settings.get("castlr.version") + "/main.lua"
             if (!http.checkURL(url)) return;
             const response = http.get(url)[0];
             // check for failure
             if (response === undefined) return;
 
             writeFile("main.lua", response.readAll());
-            print(`Updated to ${settings.get("castlr.version")}, please restart CASTLR.`);
+            // persist version number
+            settings.set("castlr._installed_version", settings.get("castlr.version"));
+            settings.save();
+            print(`Installed CASTLR ${settings.get("castlr.version")}.`);
             return true;
         }
 
