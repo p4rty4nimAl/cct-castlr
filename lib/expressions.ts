@@ -82,7 +82,7 @@ const convertToPostfix = (tokens: Token[]): Token[] => {
  * @param expr The mathematical expression to parse.
  * @returns The value of the evaluated expression, or undefined.
  */
-export const expressionEvaluator = (expr: string): number => {
+export const expressionEvaluator = (expr: string): number | undefined => {
     const tokens = tokeniser(expr);
     const postfixTokens = convertToPostfix(tokens);
     // for (const token of postfixTokens) write(token.toString() + ", ");
