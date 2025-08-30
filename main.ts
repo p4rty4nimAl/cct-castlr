@@ -243,9 +243,10 @@ function install(): boolean {
     });
     if (http) {
         const currentVersion = settings.get("castlr.version");
+        const newVersion = getReleaseDetails() || "vM.m.p"; // Major, minor, patch
         settings.define("castlr.version", {
             description: "The version of CASTLR to use.",
-            default: getReleaseDetails() ?? "vM.m.p", // Major, minor, patch
+            default: newVersion,
             type: "string"
         });
 
