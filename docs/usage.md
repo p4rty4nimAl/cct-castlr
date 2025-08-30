@@ -8,6 +8,9 @@ After moving the lua file to the desired computer, the installation may proceed 
     This setting defines the string used to identify the chest used as output inventory for the CASTLR system.
 3. `castlr.period`  
     This setting controls the amount of time, in seconds, between each user operation.
+4. `castlr.version`  
+    This setting controls the version of CASTLR. If left at the default value, CASTLR will automatically update.  
+    Automatic updates can be disabled by setting this to a specific value ('v1.0.0'), pinning the version.
 
 The above settings cannot be set from within CASTLR, and instead must be configured with the `set` program, for example: `set castlr.period 1`.
 
