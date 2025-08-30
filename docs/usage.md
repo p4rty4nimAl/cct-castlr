@@ -48,7 +48,8 @@ A recipe is defined by a recipe type (see above).
 This information is used to determine how to perform the recipe.
 Items are referred to using their in-game ID, which can be found by enabling advanced tooltips: `F3 + H`.  
 The next part of the definition is the item that the recipe produces.
-The ID, and amount of the item that is produced must be provided.  
+The ID, and amount of the item that is produced must be provided.
+The ID must be unique, such that there is only one way to make a given item.  
 The final part of the definition of a recipe is the items required to craft the given output.
 When asked for the input count, enter the number of unique items.
 You should then proceed to enter the details of the input items, as requested.
