@@ -208,7 +208,7 @@ const submenus = {
  * @returns The tag name of the latest release, or undefined.
  */
 function getReleaseDetails() {
-    const versionTestURL = "https://api.github.com/repos/p4rty4nimAl/cct-castlr/releases";
+    const versionTestURL = "https://api.github.com/repos/p4rty4nimAl/cct-castlr/releases/latest";
     if (!http.checkURL(versionTestURL)) return;
     const tagName = textutils.unserialiseJSON(http.get(versionTestURL)[0].readAll()).tag_name;
     return tagName;
@@ -260,6 +260,7 @@ function install(): boolean {
 
             writeFile("main.lua", response.readAll());
             print(`Updated to ${settings.get("castlr.version")}, please restart CASTLR.`);
+            return true;
         }
 
     }
