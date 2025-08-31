@@ -228,6 +228,8 @@ function install(): boolean {
     // Create directories, preventing crash on recipe/type addition
     fs.makeDir("./types/");
     fs.makeDir("./recipes/");
+    // reset log file
+    fs.open("castlr.log", "w")[0].close();
     /**
      * The settings for the program.
      * A user defined, constant value for a given run of the software that is accessible across
@@ -250,7 +252,7 @@ function install(): boolean {
     });
     if (http) {
         const currentVersion = settings.get("castlr._installed_version");
-        const newVersion = getReleaseDetails() || "vM.m.p"; // Major, minor, patch
+        const newVersion = getReleaseDetails();
         settings.define("castlr.version", {
             description: "The version of CASTLR to use.",
             default: newVersion,
@@ -261,7 +263,7 @@ function install(): boolean {
             const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + settings.get("castlr.version") + "/main.lua"
             if (!http.checkURL(url)) return;
             const response = http.get(url)[0];
-            // check for failure
+            // check for failure / invalid version
             if (response === undefined) return;
 
             writeFile("main.lua", response.readAll());
@@ -306,12 +308,16 @@ function main(): void {
         term.setCursorPos(1, 1);
         const action = displayMenu(menuStrings);
         const process = submenus[action];
-        if (process !== undefined) {
-            process(instance);
-        } else {
+        if (process === undefined) {
             print("Invalid mode!");
-            sleep(settings.get("castlr.period"));
-        }
+        } else xpcall(() => process(instance), (error) => {
+            printError(error);
+            const file = fs.open("castlr.log", "a")[0];
+            file.writeLine(debug.traceback(textutils.formatTime(os.time(), true) + " - ", 3));
+            file.writeLine(error);
+            file.close();
+        });
+        sleep(settings.get("castlr.period"));
     }
 }
 
@@ -319,9 +325,6 @@ main();
 
 /*
 possible future features:
-    try catch main loop
-    - log errors
-    
     optional secondary system:
     - write out recipes to disk for transfer - CraftOS already provides utilities for this
     - write out storage contents to file / pocket computer
