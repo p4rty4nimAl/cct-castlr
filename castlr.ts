@@ -252,30 +252,32 @@ function install(): boolean {
         default: 2,
         type: "number"
     });
-    if (http) {
-        const currentVersion = settings.get("castlr._installed_version");
-        const newVersion = getReleaseDetails();
-        settings.define("castlr.version", {
-            description: "The version of CASTLR to use.",
-            default: newVersion,
-            type: "string"
-        });
-        if (settings.get("castlr.version") !== currentVersion && currentVersion === undefined) {
-            // update
-            const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + settings.get("castlr.version") + "/castlr.lua"
-            if (!http.checkURL(url)) return;
-            const response = http.get(url)[0];
-            // check for failure / invalid version
-            if (response === undefined) return;
 
-            writeFile("castlr.lua", response.readAll());
-            // persist version number
-            settings.set("castlr._installed_version", settings.get("castlr.version"));
-            settings.save();
-            print(`Installed CASTLR ${settings.get("castlr.version")}.`);
-            return true;
-        }
+    if (!http) return;
 
+    const currentVersion = settings.get("castlr._installed_version");
+    const newVersion = getReleaseDetails();
+
+    settings.define("castlr.version", {
+        description: "The version of CASTLR to use.",
+        default: newVersion,
+        type: "string"
+    });
+    // if installed version !== (pinned version || latest version) or no installed version
+    if (settings.get("castlr.version") !== currentVersion || currentVersion === undefined) {
+        // update
+        const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + settings.get("castlr.version") + "/castlr.lua"
+        if (!http.checkURL(url)) return;
+        const response = http.get(url)[0];
+        // check for failure / invalid version
+        if (response === undefined) return;
+
+        writeFile("castlr.lua", response.readAll());
+        // persist version number
+        settings.set("castlr._installed_version", settings.get("castlr.version"));
+        settings.save();
+        print(`Installed CASTLR ${settings.get("castlr.version")}.`);
+        return true;
     }
 }
 /**
