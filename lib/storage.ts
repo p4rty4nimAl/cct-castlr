@@ -115,12 +115,16 @@ export class Storage {
         // get inventory data
         this._inventories = new LuaMap();
         peripherals = peripherals ?? peripheral.find("inventory");
-        const newInvFuncs = [];
+        let newInvFuncs = [];
         for (const inv of peripherals) {
             const name = peripheral.getName(inv);
             newInvFuncs.push(() => {
                 this._inventories.set(name, new Inventory(name));
             });
+            if (newInvFuncs.length === 64) {
+                parallel.waitForAll(...newInvFuncs);
+                newInvFuncs = [];
+            }
         }
         parallel.waitForAll(...newInvFuncs);
     }
