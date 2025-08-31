@@ -285,7 +285,7 @@ function main(): void {
     term.setCursorPos(1, 1);
 
     if (install()) {
-        shell.run("main.lua");
+        shell.run("castlr.lua");
         return;
     }
 
