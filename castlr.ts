@@ -230,6 +230,8 @@ function install(): boolean {
     fs.makeDir("./recipes/");
     // reset log file
     fs.open("castlr.log", "w")[0].close();
+    // ensure all settings are loaded
+    settings.load();
     /**
      * The settings for the program.
      * A user defined, constant value for a given run of the software that is accessible across
