@@ -193,9 +193,9 @@ const submenus = {
     },
     L(instance: Data) {
         const map = instance.storage.getAllItems();
-        const strings = new LuaSet<string>();
+        const strings: string[] = []
         for (const [name, count] of map)
-            strings.add(`${name} x ${count}`);
+            strings.push(`${name} x ${count}`);
         displaySearch(strings);
     },
     R(instance: Data) {

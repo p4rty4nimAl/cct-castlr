@@ -136,6 +136,7 @@ export const displayMenu = (displayText: string[]): string => {
         print(displayText[i]);
     return string.upper(getInput(displayText[displayText.length - 1]));
 }
+// TODO: change displayPages to be more like less/more unix
 /**
  * Allow a user to parse a large amount of text at their own pace.
  * @param lines The strings to page through.
@@ -275,7 +276,7 @@ export const readline = (prompt: string, func?: (partial: string, event?: LuaMul
  * @param query The query to find within each string in the given array.
  * @returns The matching values.
  */
-export const stringSearch = (searchSpace: LuaSet<string>, query: string): string[] => {
+export const stringSearch = (searchSpace: string[], query: string): string[] => {
     const matches = [];
     
     const queryPattern = `.*${query}.*`;
@@ -294,7 +295,7 @@ export const stringSearch = (searchSpace: LuaSet<string>, query: string): string
  * @param lines The strings to search through.
  * @param height The maximum amount of strings to display at once.
  */
-export const displaySearch = (lines: LuaSet<string>, fullscreen: boolean = true) => {
+export const displaySearch = (lines: string[], fullscreen: boolean = true) => {
     let y = 1;
     if (!fullscreen) y = term.getCursorPos()[1];
     const height = term.getSize()[1] - y + 1;
