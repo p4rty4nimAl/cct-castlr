@@ -258,7 +258,7 @@ function install(): boolean {
             default: newVersion,
             type: "string"
         });
-        if (settings.get("castlr.version") !== currentVersion) {
+        if (settings.get("castlr.version") !== currentVersion && currentVersion === undefined) {
             // update
             const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + settings.get("castlr.version") + "/main.lua"
             if (!http.checkURL(url)) return;
@@ -266,7 +266,7 @@ function install(): boolean {
             // check for failure / invalid version
             if (response === undefined) return;
 
-            writeFile("main.lua", response.readAll());
+            writeFile("castlr.lua", response.readAll());
             // persist version number
             settings.set("castlr._installed_version", settings.get("castlr.version"));
             settings.save();
