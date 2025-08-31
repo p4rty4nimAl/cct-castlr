@@ -19,6 +19,9 @@ const submenus = {
     C(instance: Data) {
         // gather data for input
         const outputChest = instance.storage.getInventory(settings.get("castlr.outputChest"));
+        if (outputChest === undefined) {
+            error("Output chest not set! Please review installation instructions.", 1);
+        }
         outputChest.syncData();
         const max = outputChest.getItemLimit(1) * outputChest.size();
         const craftableItems: string[] = [];
@@ -160,7 +163,11 @@ const submenus = {
         instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
-        instance.storage.getInventory(settings.get("castlr.inputChest")).syncData();
+        const inputChest = instance.storage.getInventory(settings.get("castlr.inputChest"));
+        if (inputChest === undefined) {
+            error("Input chest not set! Please review installation instructions.", 1);
+        }
+        inputChest.syncData();
         if (getConsent("Also store items from outputs?")) {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(settings.get("castlr.inputChest"));
@@ -228,17 +235,17 @@ function install(): boolean {
      */
     settings.define("castlr.inputChest", {
         description: "The input chest for CASTLR.",
-        default: "left",
+        default: "",
         type: "string"
     });
     settings.define("castlr.outputChest", {
         description: "The output chest for CASTLR.",
-        default: "right",
+        default: "",
         type: "string"
     });
     settings.define("castlr.period", {
         description: "Time inserted after CASTLR operations to read output.",
-        default: 1,
+        default: 2,
         type: "number"
     });
     if (http) {
