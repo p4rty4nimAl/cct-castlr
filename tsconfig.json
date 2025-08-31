@@ -12,8 +12,8 @@
     "tstl": {
         "luaTarget": "CC-5.2",
         "luaLibImport": "require-minimal",
-        "luaBundle": "main.lua",
-        "luaBundleEntry": "main.ts"
+        "luaBundle": "castlr.lua",
+        "luaBundleEntry": "castlr.ts"
     },
     "include": [
         "./*.ts",

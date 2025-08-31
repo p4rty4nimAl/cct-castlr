@@ -6,12 +6,12 @@ To build CASTLR from source:
 1. Clone the repository (or download the ZIP).
 2. Run `npm install` to install dependencies, including TypeScriptToLua.
 3. Build the project with `npm run build`.
-4. Copy `main.lua` to ComputerCraft, either by copying into the computer folder, dropping on the terminal, using Pastebin, or with [CraftOS-PC Remote](https://remote.craftos-pc.cc) or [cloud-catcher](https://cloud-catcher.squiddev.cc).
+4. Copy `castlr.lua` to ComputerCraft, either by copying into the computer folder, dropping on the terminal, using Pastebin, or with [CraftOS-PC Remote](https://remote.craftos-pc.cc) or [cloud-catcher](https://cloud-catcher.squiddev.cc).
 5. See docs/install.md for post-install instructions.
 
 Alternatively:
 1. Download the latest release with the following command:
-`wget run https://github.com/p4rty4nimAl/cct-castlr/releases/latest/download/main.lua`
+`wget run https://github.com/p4rty4nimAl/cct-castlr/releases/latest/download/castlr.lua`
 
 ## Libraries
 

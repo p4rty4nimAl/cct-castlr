@@ -2,7 +2,7 @@
   "name": "cc-tstl-template",
   "version": "1.113.1",
   "description": "Template project for ComputerCraft programs written in TypeScript.",
-  "main": "main.ts",
+  "main": "castlr.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tstl"
