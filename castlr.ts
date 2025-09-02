@@ -211,10 +211,12 @@ const submenus = {
 } as { [index: string]: undefined | ((this: void, instance: Data) => void) }
 
 /**
- * Get the latest release tag.
- * @returns The tag name of the latest release, or undefined.
+ * Get the tag specified by 'castlr.version'. Ensure http is available.
+ * @returns The tag name of the latest release, or the tag set in 'castlr.version'.
  */
-function getReleaseDetails() {
+function getSelectedReleaseTag(): string | undefined {
+    const version = settings.get("castlr.version");
+    if (version !== "latest") return version;
     const versionTestURL = "https://api.github.com/repos/p4rty4nimAl/cct-castlr/releases/latest";
     if (!http.checkURL(versionTestURL)) return;
     const tagName = textutils.unserialiseJSON(http.get(versionTestURL)[0].readAll()).tag_name;
@@ -255,30 +257,36 @@ function install(): boolean {
 
     if (!http) return;
 
-    const currentVersion = settings.get("castlr._installed_version");
-    const newVersion = getReleaseDetails();
-
     settings.define("castlr.version", {
         description: "The version of CASTLR to use.",
-        default: newVersion,
+        default: "latest",
         type: "string"
     });
-    // if installed version !== (pinned version || latest version) or no installed version
-    if (settings.get("castlr.version") !== currentVersion || currentVersion === undefined) {
-        // update
-        const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + settings.get("castlr.version") + "/castlr.lua"
-        if (!http.checkURL(url)) return;
-        const response = http.get(url)[0];
-        // check for failure / invalid version
-        if (response === undefined) return;
 
-        writeFile("castlr.lua", response.readAll());
-        // persist version number
-        settings.set("castlr._installed_version", settings.get("castlr.version"));
-        settings.save();
-        print(`Installed CASTLR ${settings.get("castlr.version")}.`);
-        return true;
-    }
+    const currentVersion: string | undefined = settings.get("castlr._installed_version");
+    const desiredVersion: string | undefined = getSelectedReleaseTag();
+    
+    if (desiredVersion === undefined) return; // cannot determine version to install
+    if (currentVersion !== undefined && desiredVersion === currentVersion) return; // already installed + up to date
+
+    // update / install desired version
+    
+    const url = "https://github.com/p4rty4nimAl/cct-castlr/releases/download/" + desiredVersion + "/castlr.lua"
+    if (!http.checkURL(url)) return;
+    const response = http.get(url)[0];
+    // check for failure / invalid version
+    if (response === undefined) return;
+
+    // write new version
+    writeFile("castlr.lua.new", response.readAll());
+    fs.delete("castlr.lua");
+    fs.move("castlr.lua.new", "castlr.lua");
+
+    // persist version number
+    settings.set("castlr._installed_version", desiredVersion);
+    settings.save();
+    print(`Installed CASTLR ${desiredVersion}.`);
+    return true;
 }
 /**
  * The main loop of the program
