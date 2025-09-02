@@ -231,7 +231,11 @@ function install(): boolean {
     fs.makeDir("./types/");
     fs.makeDir("./recipes/");
     // reset log file
-    fs.open("castlr.log", "w")[0].close();
+    const logHeader = 
+        "CASTLR Version: " + (settings.get("castlr._installed_version")) + "\n" +
+        _HOST + "\n";
+
+    writeFile("castlr.log", logHeader);
     // ensure all settings are loaded
     settings.load();
     /**
