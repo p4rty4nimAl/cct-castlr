@@ -97,8 +97,6 @@ export interface Data {
      * @returns An array, to be traversed as a stack upon which the crafting recipes to be performed are stored.
      */
     gatherIngredients(name: string, count: number): [LuaMap<string, number>, (Recipe & { count: number })[]];
-
-    
 }
 
 /**
