@@ -1,5 +1,7 @@
 /** @noSelfInFile **/
 
+import { Data } from "./data";
+
 /**
  * Writes data to a file, then closes it.
  * @param path Path of the file to write.
