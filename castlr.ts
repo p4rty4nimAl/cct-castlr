@@ -210,8 +210,7 @@ const rootMenu = {
     R(instance: Data) {
         instance.init();
     }
-} as { [index: string]: undefined | ((this: void, instance: Data) => void) }
-
+} as { [index: string]: undefined | ((this: void, instance: Data) => void) };
 /**
  * Get the tag specified by 'castlr.version'. Ensure http is available.
  * @returns The tag name of the latest release, or the tag set in 'castlr.version'.
