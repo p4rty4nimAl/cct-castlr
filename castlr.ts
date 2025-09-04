@@ -16,7 +16,6 @@ import { Data } from "./lib/data";
 import { expressionCompletor, expressionEvaluator, expressionValidator } from "./lib/expressions";
 
 const addDefinitionMenu = {
-    /** @noSelf **/
     T(instance: Data) {
         const invs = instance.storage.getInventoryNames();
         const [typeID, inputChest, outputChest] = correctableInput(
@@ -32,7 +31,6 @@ const addDefinitionMenu = {
         writeFile(saveLocation, textutils.serializeJSON({ typeID, input: inputChest, output: outputChest }));
         fs.makeDir(`./recipes/${splitString(typeID, ":")[1]}`);
     },
-    /** @noSelf **/
     R(instance: Data) {
         const items = instance.storage.getItemNames();
         const recipeTypeStrs = instance.getRecipeTypeIDs();
@@ -67,7 +65,7 @@ const addDefinitionMenu = {
         const saveLocation = fs.combine("./recipes/", splitString(typeID, ":")[1], `${splitString(outputItemID, ":")[1]}.json`);
         writeFile(saveLocation, textutils.serialiseJSON({ typeID, input: inputItems, output: { name: outputItemID, count: tonumber(outputItemCount) } }));
     }
-} as { [index: string]: undefined | ((this: void, instance: Data) => void) };
+} as { [index: string]: (this: void, instance: Data) => void };
 const rootMenu = {
     C(instance: Data) {
         // gather data for input
@@ -154,6 +152,7 @@ const rootMenu = {
     },
     A(instance: Data) {
         const submenuText = [
+            "Which would you like to add?",
             "   T - add new type.",
             "   R - add new recipe.",
             "Entry to add: "
@@ -210,7 +209,7 @@ const rootMenu = {
     R(instance: Data) {
         instance.init();
     }
-} as { [index: string]: undefined | ((this: void, instance: Data) => void) };
+} as { [index: string]: (this: void, instance: Data) => void };
 /**
  * Get the tag specified by 'castlr.version'. Ensure http is available.
  * @returns The tag name of the latest release, or the tag set in 'castlr.version'.
