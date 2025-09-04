@@ -2,7 +2,6 @@ import {
     writeFile,
     splitString,
     getInput,
-    displayMenu,
     correctableInput,
     namespaceValidator,
     intValidator,
@@ -16,7 +15,60 @@ import {
 import { Data } from "./lib/data";
 import { expressionCompletor, expressionEvaluator, expressionValidator } from "./lib/expressions";
 
-const submenus = {
+const addDefinitionMenu = {
+    /** @noSelf **/
+    T(instance: Data) {
+        const invs = instance.storage.getInventoryNames();
+        const [typeID, inputChest, outputChest] = correctableInput(
+            [
+                "namespaced recipe ID",
+                "input chest ID",
+                "output chest ID"
+            ],
+            [namespaceValidator],
+            [, stringCompletor(invs), stringCompletor(invs)]
+        );
+        const saveLocation = fs.combine("./types/", `${splitString(typeID, ":")[1]}.json`);
+        writeFile(saveLocation, textutils.serializeJSON({ typeID, input: inputChest, output: outputChest }));
+        fs.makeDir(`./recipes/${splitString(typeID, ":")[1]}`);
+    },
+    /** @noSelf **/
+    R(instance: Data) {
+        const items = instance.storage.getItemNames();
+        const recipeTypeStrs = instance.getRecipeTypeIDs();
+        const [typeID, outputItemID, outputItemCount] = correctableInput(
+            [
+                "namespaced recipe ID",
+                "output item ID",
+                "output item count"
+            ],
+            [namespaceValidator, namespaceValidator, intValidator(1, 64)],
+            [stringCompletor(recipeTypeStrs), stringCompletor(items)]
+        );
+        let inputCount = -1;
+        while (!(0 < inputCount && inputCount < 10))
+            inputCount = tonumber(getInput("Enter - recipe input count (1-9): ")) ?? -1;
+        const inputStrings = [];
+        const validationFuncs = [];
+        const completionFuncs = [];
+        for (let i = 0; i < inputCount; i++) {
+            inputStrings.push(`item ${i + 1} ID`);
+            inputStrings.push(`item ${i + 1} count`);
+
+            validationFuncs.push(namespaceValidator);
+            validationFuncs.push(intValidator(1, 64));
+
+            completionFuncs[i * 2] = stringCompletor(items);
+        }
+        const inputItemsRaw = correctableInput(inputStrings, validationFuncs, completionFuncs);
+        const inputItems = [];
+        for (let i = 0; i < inputItemsRaw.length; i += 2)
+            inputItems.push({ name: inputItemsRaw[i], count: tonumber(inputItemsRaw[i + 1]) });
+        const saveLocation = fs.combine("./recipes/", splitString(typeID, ":")[1], `${splitString(outputItemID, ":")[1]}.json`);
+        writeFile(saveLocation, textutils.serialiseJSON({ typeID, input: inputItems, output: { name: outputItemID, count: tonumber(outputItemCount) } }));
+    }
+} as { [index: string]: undefined | ((this: void, instance: Data) => void) };
+const rootMenu = {
     C(instance: Data) {
         // gather data for input
         const outputChest = instance.storage.getInventory(settings.get("castlr.outputChest"));
@@ -106,61 +158,10 @@ const submenus = {
             "   R - add new recipe.",
             "Entry to add: "
         ];
-        const items = instance.storage.getItemNames();
-        const branches = {
-            /** @noSelf **/
-            T() {
-                const invs = instance.storage.getInventoryNames();
-                const [typeID, inputChest, outputChest] = correctableInput(
-                    [
-                        "namespaced recipe ID",
-                        "input chest ID",
-                        "output chest ID"
-                    ],
-                    [namespaceValidator],
-                    [, stringCompletor(invs), stringCompletor(invs)]
-                );
-                const saveLocation = fs.combine("./types/", `${splitString(typeID, ":")[1]}.json`);
-                writeFile(saveLocation, textutils.serializeJSON({ typeID, input: inputChest, output: outputChest }));
-                fs.makeDir(`./recipes/${splitString(typeID, ":")[1]}`);
-            },
-            /** @noSelf **/
-            R() {
-                const recipeTypeStrs = instance.getRecipeTypeIDs();
-                const [typeID, outputItemID, outputItemCount] = correctableInput(
-                    [
-                        "namespaced recipe ID",
-                        "output item ID",
-                        "output item count"
-                    ],
-                    [namespaceValidator, namespaceValidator, intValidator(1, 64)],
-                    [stringCompletor(recipeTypeStrs), stringCompletor(items)]
-                );
-                let inputCount = -1;
-                while (!(0 < inputCount && inputCount < 10))
-                    inputCount = tonumber(getInput("Enter - recipe input count (1-9): ")) ?? -1;
-                const inputStrings = [];
-                const validationFuncs = [];
-                const completionFuncs = [];
-                for (let i = 0; i < inputCount; i++) {
-                    inputStrings.push(`item ${i + 1} ID`);
-                    inputStrings.push(`item ${i + 1} count`);
-
-                    validationFuncs.push(namespaceValidator);
-                    validationFuncs.push(intValidator(1, 64));
-
-                    completionFuncs[i * 2] = stringCompletor(items);
-                }
-                const inputItemsRaw = correctableInput(inputStrings, validationFuncs, completionFuncs);
-                const inputItems = [];
-                for (let i = 0; i < inputItemsRaw.length; i += 2)
-                    inputItems.push({ name: inputItemsRaw[i], count: tonumber(inputItemsRaw[i + 1]) });
-                const saveLocation = fs.combine("./recipes/", splitString(typeID, ":")[1], `${splitString(outputItemID, ":")[1]}.json`);
-                writeFile(saveLocation, textutils.serialiseJSON({ typeID, input: inputItems, output: { name: outputItemID, count: tonumber(outputItemCount) } }));
-            }
-        } as { [index: string]: () => void };
-        const process = branches[displayMenu(submenuText)];
-        if (process !== undefined) process();
+        const process = runMenu(submenuText, addDefinitionMenu);
+        if (process !== undefined) {
+            process(instance);
+        }
         instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
@@ -292,7 +293,7 @@ function install(): boolean {
     settings.save();
     print(`Installed CASTLR ${desiredVersion}.`);
     return true;
-}
+};
 /**
  * The main loop of the program
  */
