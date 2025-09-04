@@ -321,14 +321,15 @@ function main(): void {
     const instance = new Data();
     while (true) {
         const process = runMenu(menuStrings, rootMenu);
-        xpcall(() => process(instance), (error) => {
-            if (error === "Terminated") os.exit();
-            printError(error);
+        const [success, terminating] = xpcall(() => process(instance), (err) => {
+            printError(err);
+            if (err === "Terminated") return true;
             const file = fs.open("castlr.log", "a")[0];
             file.writeLine(debug.traceback(textutils.formatTime(os.time(), true) + " - ", 3));
-            file.writeLine(error);
+            file.writeLine(err);
             file.close();
         });
+        if (!success && terminating) break;
         sleep(settings.get("castlr.period"));
     }
 }
