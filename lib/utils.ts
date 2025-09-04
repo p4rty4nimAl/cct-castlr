@@ -136,6 +136,23 @@ export const displayMenu = (displayText: string[]): string => {
         print(displayText[i]);
     return string.upper(getInput(displayText[displayText.length - 1]));
 }
+/**
+ * Displays a menu and returns the users' selected process.
+ * @param descriptions Text describing the available options for the user.
+ * @param funcs Functions corresponding to each option the user can select.
+ * @returns The selected function, or undefined.
+ */
+export const runMenu = (
+        descriptions: string[],
+        funcs: { [index: string]: (this: void, instance: Data) => void }
+    ): ((this: void, instance: Data) => void) | undefined => {
+    term.clear();
+    term.setCursorPos(1, 1);
+    const action = displayMenu(descriptions);
+    const process = funcs[action];
+    if (process === undefined) print("Invalid option!");
+    return process;
+}
 // TODO: change displayPages to be more like less/more unix
 /**
  * Allow a user to parse a large amount of text at their own pace.

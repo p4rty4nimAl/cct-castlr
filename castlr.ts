@@ -10,7 +10,8 @@ import {
     stringCompletor,
     displaySearch,
     ProgressBar,
-    getConsent
+    getConsent,
+    runMenu
 } from "./lib/utils";
 import { Data } from "./lib/data";
 import { expressionCompletor, expressionEvaluator, expressionValidator } from "./lib/expressions";
@@ -320,13 +321,9 @@ function main(): void {
     print("Initalising..");
     const instance = new Data();
     while (true) {
-        term.clear();
-        term.setCursorPos(1, 1);
-        const action = displayMenu(menuStrings);
-        const process = submenus[action];
-        if (process === undefined) {
-            print("Invalid mode!");
-        } else xpcall(() => process(instance), (error) => {
+        const process = runMenu(menuStrings, rootMenu);
+        xpcall(() => process(instance), (error) => {
+            if (error === "Terminated") os.exit();
             printError(error);
             const file = fs.open("castlr.log", "a")[0];
             file.writeLine(debug.traceback(textutils.formatTime(os.time(), true) + " - ", 3));
