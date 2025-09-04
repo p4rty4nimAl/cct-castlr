@@ -363,4 +363,7 @@ possible future features:
     - scrollable window
 
     prevent recipe loops (ingot <- block <- ingot)
+
+    convert datapacks to recipes
+    - as automatic as possible, query user for clarification
 */
