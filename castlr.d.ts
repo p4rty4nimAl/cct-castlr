@@ -11,11 +11,13 @@ type RecipeType = {
     typeID: RecipeTypeIdentifier
     input: RecipeLocation
     output: RecipeLocation
+    source: string
 }
 type Recipe = {
     typeID: RecipeTypeIdentifier
     input: SlotDetail[]
     output: SlotDetail
+    source: string
 }
 type Settings = {
     period: number

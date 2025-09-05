@@ -25,6 +25,20 @@ export interface Data {
     storage: Storage;
 
     /**
+     * Container for issues encountered when loading recipes or types.
+     */
+    issues: {
+        conflict: {
+            first: {path: string}
+            second: {path: string}
+            reason: string
+        }[]
+        invalid: {
+            path: string
+            reason: string
+        }[]
+    }
+    /**
      * Creates a Data instance - Fields are initalised using {@link init}.
      */
     constructor(): void;
@@ -155,22 +169,36 @@ export class Data {
                 break;
             }
         if (!hasExistingType) {
-            print("Recipe type must be declared before adding a recipe using it.");
+            this.issues.invalid.push({
+                path: recipe.source,
+                reason: "Recipe type must be declared before adding a recipe using it."
+            });
             return;
         }
         for (const existingRecipe of this._recipes)
             if (recipe.output.name === existingRecipe.output.name) {
-                print("Recipes with outputs matching another are not allowed.");
+                this.issues.conflict.push({
+                    first: {path: existingRecipe.source},
+                    second: {path: recipe.source},
+                    reason: "Recipes with outputs matching another are not allowed."
+                });
                 return;
             }
         this._recipes.add(recipe);
     }
 
     _addRecipeType(recipeType: RecipeType) {
-        if (recipeType.input === undefined || recipeType.output === undefined) return;
+        if (recipeType.input === undefined || recipeType.output === undefined) {
+            this.issues.invalid.push({path: recipeType.source, reason: "Missing input or output chest."})
+            return;
+        }
         for (const existingType of this._recipeTypes)
             if (existingType.typeID === recipeType.typeID) {
-                print("Recipe types with types matching another are not allowed.");
+                this.issues.conflict.push({
+                    first: {path: existingType.source},
+                    second: {path: recipeType.source},
+                    reason: "Recipes with outputs matching another are not allowed."
+                });
                 return;
             }
         this._recipeTypes.add(recipeType);
@@ -179,18 +207,27 @@ export class Data {
 
     _loadRecipesFromDirectory(directory: string) {
         const files = fs.list(directory);
-        for (const i of $range(0, files.length - 1))
-            if (endsWith(files[i], ".json"))
-                this._addRecipe(textutils.unserialiseJSON(readFile(fs.combine(directory, files[i]))) as Recipe);
+        for (const file of files)
+            if (endsWith(file, ".json")) {
+                const recipeString = readFile(fs.combine(directory, file));
+                const recipeObj: Recipe = textutils.unserialiseJSON(recipeString);
+                recipeObj.source = fs.combine(directory, file);
+                this._addRecipe(recipeObj);
+            }
     }
 
     loadRecipeTypesFromDirectory(directory: string) {
+        this.issues = {conflict: [], invalid: []};
         this._recipeTypes = new LuaSet();
         this._recipes = new LuaSet();
         const files = fs.list(directory);
-        for (const i of $range(0, files.length - 1))
-            if (endsWith(files[i], ".json"))
-                this._addRecipeType(textutils.unserialiseJSON(readFile(fs.combine(directory as string, files[i]))) as RecipeType);
+        for (const file of files)
+            if (endsWith(file, ".json")) {
+                const typeString = readFile(fs.combine(directory, file));
+                const typeObj = textutils.unserialiseJSON(typeString);
+                typeObj.source = fs.combine(directory, file)
+                this._addRecipeType(typeObj);
+            }
     }
 
     getRecipeTypeIDs(): string[] {

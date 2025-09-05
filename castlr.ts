@@ -160,10 +160,11 @@ const rootMenu = {
         const process = runMenu(submenuText, addDefinitionMenu);
         if (process !== undefined) {
             process(instance);
+            instance.loadRecipeTypesFromDirectory("./types/");
         }
-        instance.loadRecipeTypesFromDirectory("./types/");
     },
     S(instance: Data) {
+        // TODO: show user storage capacity / used
         const inputChest = instance.storage.getInventory(settings.get("castlr.inputChest"));
         if (inputChest === undefined) {
             error("Input chest not set! Please review installation instructions.", 1);
@@ -319,6 +320,20 @@ function main(): void {
     ];
     print("Initalising..");
     const instance = new Data();
+    if (instance.issues.conflict.length !== 0 || instance.issues.invalid.length !== 0) {
+        const pagableStrings: string[] = [];
+        for (const conflict of instance.issues.conflict) {
+            pagableStrings.push("'" + conflict.first.path + "' conflicts with '" + conflict.second.path + "'");
+            pagableStrings.push("Reason: " + conflict.reason);
+        }
+        for (const invalid of instance.issues.invalid) {
+            pagableStrings.push("'" + invalid.path + "' is invalid.");
+            pagableStrings.push("Reason: " + invalid.reason);
+        }
+        print("The following must be resolved before using CASTLR:")
+        displayPages(pagableStrings, false);
+        return;
+    }
     while (true) {
         const process = runMenu(menuStrings, rootMenu);
         const [success, terminating] = xpcall(() => process(instance), (err) => {
@@ -349,8 +364,6 @@ possible future features:
     - moving items as they are produced / space is made in input (current behaviour: move them all at once)
     - coroutine for each recipe
     - option to output crafts into storage - for users without a large chest mod
-
-    display total capacity / used
 
     recipe lister
     - list all available recipes, searchable
