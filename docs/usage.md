@@ -103,6 +103,18 @@ If a type is rendered invalid, its associated recipes will not be loaded.
 Recipes are stored next to the program, in `./recipes/<type>/`.
 As with types, all recipes are stored as JSON, and their formats must also be preserved.
 
+**Issues**
+* "Recipe type must be declared before adding a recipe using it."
+  - To resolve this, the recipe definition must be removed. The recipe type it intends to use should then be added, and the recipe can be re-defined. 
+* "Recipes with outputs matching another are not allowed."
+  - Of the two recipe definitions shown, one must be deleted.
+* "Missing input or output chest."
+  - The recipe type definition must be `edit`ed to insert the "input" or "output" tag.
+* "Recipe types with types matching another are not allowed."
+  - Of the two recipe type definitions shown, one must be deleted.
+* "Invalid JSON structure."
+  - The definition file specified cannot be read by CASTLR, and must either be made valid, or deleted.
+
 ### Automated Farms
 Automated farms can be integrated into CASTLR, without it using the farm output as storage.
 By adding a new recipe type (namespaced with `special` to avoid naming conflicts), with a blank input chest, the output chest of the farm will be pulled from, but never pushed to.

@@ -197,7 +197,7 @@ export class Data {
                 this.issues.conflict.push({
                     first: {path: existingType.source},
                     second: {path: recipeType.source},
-                    reason: "Recipes with outputs matching another are not allowed."
+                    reason: "Recipe types with types matching another are not allowed."
                 });
                 return;
             }
