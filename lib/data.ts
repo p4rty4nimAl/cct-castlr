@@ -211,6 +211,13 @@ export class Data {
             if (endsWith(file, ".json")) {
                 const recipeString = readFile(fs.combine(directory, file));
                 const recipeObj: Recipe = textutils.unserialiseJSON(recipeString);
+                if (recipeObj === undefined) {
+                    this.issues.invalid.push({
+                        path: fs.combine(directory, file),
+                        reason: "Invalid JSON structure."
+                    });
+                    return;
+                }
                 recipeObj.source = fs.combine(directory, file);
                 this._addRecipe(recipeObj);
             }
@@ -225,6 +232,13 @@ export class Data {
             if (endsWith(file, ".json")) {
                 const typeString = readFile(fs.combine(directory, file));
                 const typeObj = textutils.unserialiseJSON(typeString);
+                if (typeObj === undefined) {
+                    this.issues.invalid.push({
+                        path: fs.combine(directory, file),
+                        reason: "Invalid JSON structure."
+                    });
+                    return;
+                }
                 typeObj.source = fs.combine(directory, file)
                 this._addRecipeType(typeObj);
             }
