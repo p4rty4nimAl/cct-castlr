@@ -53,21 +53,13 @@ export const getConsent = (prompt: string) => {
 /**
  * Splits a string on a given separator.
  * @param value The string to split into multiple.
- * @param separator The string to use to separate the given value.
+ * @param separator The chars to use to separate the given value.
  * @returns The parts of the separated string.
  */
 export const splitString = (value: string, separator: string): string[] => {
-    const splitStrings = [];
-    let pointer = 1;
-    do {
-        const [start, finish] = string.find(value, separator, pointer, true);
-        if (start === undefined) {
-            splitStrings.push(string.sub(value, pointer));
-            return splitStrings;
-        }
-        splitStrings.push(string.sub(value, pointer, start - 1));
-        pointer = finish + 1;
-    } while (pointer < value.length);
+    const splitStrings: string[] = [];
+    for (const [match] of string.gmatch(value, `[^${separator}]+`))
+        splitStrings.push(match);
     return splitStrings;
 }
 /**
