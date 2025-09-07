@@ -20,14 +20,17 @@ export interface Storage {
      * Creates a Storage instance, initalising fields using {@link init}.
      * Requires storage type sets to allow for filtering.
      * Wraps all connected inventory peripherals using {@link Inventory}.
+     * @param storagesByType The storage type sets.
+     * @param peripherals A table of peripherals as returned by `peripheral.find("inventory")`.
      */
-    constructor(storagesByType: { [index in StorageType]: LuaSet<string> }): void;
+    constructor(storagesByType: { [index in StorageType]: LuaSet<string> }, peripherals?: LuaMultiReturn<InventoryPeripheral[]>): void;
 
     /**
      * Wraps all connected inventory peripherals using {@link Inventory}.
      * Alternatively, if peripherals is passed, it is used as the list of inventory peripherals to wrap.
+     * @param peripherals A table of peripherals as returned by `peripheral.find("inventory")`.
      */
-    init(peripherals?: LuaMultiReturn<IPeripheral[]>): void;
+    init(peripherals?: LuaMultiReturn<InventoryPeripheral[]>): void;
 
     /**
      * Iterates through each connected inventory, building a map of item name to total counts.
@@ -106,15 +109,15 @@ export class Storage {
     _inventories: LuaMap<string, Inventory>;
     _storagesByType: { [index in StorageType]: LuaSet<string> };
 
-    constructor(storagesByType: { [index in StorageType]: LuaSet<string> }, peripherals?: LuaMultiReturn<IPeripheral[]>) {
+    constructor(storagesByType: { [index in StorageType]: LuaSet<string> }, peripherals?: LuaMultiReturn<InventoryPeripheral[]>) {
         this._storagesByType = storagesByType;
         this.init(peripherals);
     }
 
-    init(peripherals?: LuaMultiReturn<IPeripheral[]>) {
+    init(peripherals?: LuaMultiReturn<InventoryPeripheral[]>) {
         // get inventory data
         this._inventories = new LuaMap();
-        peripherals = peripherals ?? peripheral.find("inventory");
+        peripherals = peripherals ?? peripheral.find("inventory") as LuaMultiReturn<InventoryPeripheral[]>;
         let newInvFuncs = [];
         for (const inv of peripherals) {
             const name = peripheral.getName(inv);

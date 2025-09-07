@@ -145,7 +145,7 @@ export class Data {
         }
 
         // get inventory data
-        const peripherals = peripheral.find("inventory");
+        const peripherals = peripheral.find("inventory") as LuaMultiReturn<InventoryPeripheral[]>;
         for (const inv of peripherals) {
             const name = peripheral.getName(inv);
             if (!inputs.has(name)) {
