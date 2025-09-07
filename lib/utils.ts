@@ -24,6 +24,29 @@ export const readFile = (path: string) => {
     file.close();
     return data;
 };
+/**
+ * 
+ * @param pattern The pattern a valid directory will match.
+ * @param rootDir The directory to search within. Defaults to the working directory ("/").
+ * @returns A set of the matching directories. 
+ * @returns An array of the matching directories.
+ */
+export const getDirectoriesMatchingPattern = (pattern: string, rootDir?: string) => {
+    rootDir = rootDir ?? "./";
+    const allFiles = fs.list(rootDir);
+    // for efficient validation test
+    const diskDirSet: LuaSet<string> = new LuaSet();
+    // for string completion
+    const diskDirList: string[] = [];
+    for (const dir of allFiles)
+        if (fs.isDir(dir) && string.find(dir, pattern)[0] !== undefined) {
+            diskDirSet.add(dir);
+            diskDirList.push(dir);
+        }
+    return $multi(diskDirSet, diskDirList);
+}
+
+
 type InputOptions = {
     replaceChar?: string
     history?: string[]
