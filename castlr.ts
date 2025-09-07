@@ -227,7 +227,7 @@ function getSelectedReleaseTag(): string | undefined {
  * Creates essential directories and defines settings for CASTLR.
  * @returns Whether a restart is required.
  */
-function install(): boolean {
+function setup(): boolean {
     // Create directories, preventing crash on recipe/type addition
     fs.makeDir("./types/");
     fs.makeDir("./recipes/");
@@ -301,7 +301,7 @@ function main(): void {
     term.clear();
     term.setCursorPos(1, 1);
 
-    if (install()) {
+    if (setup()) {
         shell.run("castlr.lua");
         return;
     }
