@@ -233,9 +233,14 @@ export class Storage {
         for (const destStr of to) {
             // for each dest inventory
             const destInv = this.getInventory(destStr);
-            for (const [fromSlot] of pairs(srcInv.list()))
+            let workComplete = true;
+            for (const [fromSlot] of pairs(srcInv.list())) {
+                // if running inside loop, there are items to move
+                workComplete = false;
                 // push items from source to destination
                 srcInv.pushItems(destInv, fromSlot);
+            }
+            if (workComplete) return;
         }
     }
 }
