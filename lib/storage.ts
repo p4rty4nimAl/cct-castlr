@@ -75,6 +75,13 @@ export interface Storage {
     getInventory(name: string): Inventory;
 
     /**
+     * Gets the total number of free slots and all slots.
+     * @returns The total number of free slots in storage.
+     * @returns The total number of slots in storage.
+     */
+    getTotalCapacity(): LuaMultiReturn<[number, number]>;
+
+    /**
      * This function will move items from a single source to many destinations.
      * It will only move a single item, up to the given limit.
      * @param from The name of the source inventory peripheral.
@@ -174,6 +181,19 @@ export class Storage {
         if (maybeInventory !== undefined) return maybeInventory;
         this.init();
         return this._inventories.get(name);
+    }
+
+    getTotalCapacity() {
+        const storageInvStrings = this.getStoragesByType(StorageType.Storage);
+        let freeCount = 0;
+        let totalCount = 0;
+        for (const invString of storageInvStrings) {
+            const inv = this.getInventory(invString);
+            freeCount += inv.getFreeSlotCount();
+            totalCount += inv.size();
+        }
+        return $multi(freeCount, totalCount);
+
     }
 
     moveItemFromOne(from: string, to: LuaSet<string> | [string], name: string, limit: number): boolean {

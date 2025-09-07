@@ -164,12 +164,15 @@ const rootMenu = {
         }
     },
     S(instance: Data) {
-        // TODO: show user storage capacity / used
         const inputChest = instance.storage.getInventory(settings.get("castlr.inputChest"));
         if (inputChest === undefined) {
             error("Input chest not set! Please review installation instructions.", 1);
         }
         inputChest.syncData();
+        const [freeSlots, totalSlots] = instance.storage.getTotalCapacity();
+        const usedSlots = totalSlots - freeSlots;
+        print("Storage slots used: " + usedSlots + " / " + totalSlots);
+        new ProgressBar(usedSlots / totalSlots);
         if (getConsent("Also store items from outputs?")) {
             const asLuaSet = new LuaSet<string>();
             asLuaSet.add(settings.get("castlr.inputChest"));

@@ -60,6 +60,12 @@ export interface Inventory {
     syncData(): void;
 
     /**
+     * Gets the number of slots without items.
+     * @returns The number of slots containing no items.
+     */
+    getFreeSlotCount(): number;
+
+    /**
      * @see {@link https://tweaked.cc/generic_peripheral/inventory.html#v:size|tweaked.cc#size}
      */
     size(): number;
@@ -216,6 +222,13 @@ export class Inventory {
             }
             currentSlots.set(slot, item.count);
         }
+    }
+
+    getFreeSlotCount() {
+        let occupiedCount = 0;
+        for (const [,] of pairs(this._list))
+            occupiedCount = occupiedCount + 1;
+        return this.size() - occupiedCount;
     }
 
     size() {
